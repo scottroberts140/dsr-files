@@ -1,0 +1,40 @@
+[build-system]
+requires = ["setuptools>=45", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dsr-files"
+version = "0.1.0"
+description = "File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF)"
+readme = "README.md"
+license = { text = "MIT" }
+authors = [{ name = "Scott Roberts", email = "scott@example.com" }]
+requires-python = ">=3.9"
+dependencies = [
+    "pandas>=1.3.0",
+    "joblib>=1.0.0",
+    "reportlab>=3.6.0",
+    "pypdf>=4.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "flake8>=4.0.0",
+    "mypy>=0.950",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.black]
+line-length = 100
+target-version = ["py39", "py310", "py311"]
+
+[tool.mypy]
+python_version = "3.9"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
