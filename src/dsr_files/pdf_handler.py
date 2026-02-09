@@ -25,15 +25,20 @@ import io
 
 
 class PageOrientation(Enum):
+    """Page orientation options for PDF layouts."""
+
     LANDSCAPE = auto()
     PORTRAIT = auto()
 
 
 class PageSize(Enum):
+    """Supported page sizes with layout defaults."""
+
     LETTER = auto()
     A4 = auto()
 
     def _portrait_dimensions(self) -> Tuple[float, float]:
+        """Return portrait (width, height) in inches for this page size."""
         match self:
             case PageSize.LETTER:
                 return 8.5, 11.0
@@ -43,6 +48,7 @@ class PageSize(Enum):
         raise NotImplementedError(f"Dimensions for page size {self.name} not implemented.")
 
     def width(self, orientation: PageOrientation) -> float:
+        """Return page width in inches for the given orientation."""
         w, h = self._portrait_dimensions()
         match orientation:
             case PageOrientation.LANDSCAPE:
@@ -53,6 +59,7 @@ class PageSize(Enum):
         raise NotImplementedError(f"Dimensions for orientation {orientation.name} not implemented.")
 
     def height(self, orientation: PageOrientation) -> float:
+        """Return page height in inches for the given orientation."""
         w, h = self._portrait_dimensions()
         match orientation:
             case PageOrientation.LANDSCAPE:
@@ -64,6 +71,7 @@ class PageSize(Enum):
 
     @property
     def line_height(self) -> float:
+        """Default line height as a fraction of page height."""
         match self:
             case PageSize.LETTER:
                 return 0.03
@@ -74,6 +82,7 @@ class PageSize(Enum):
 
     @property
     def row_height(self) -> float:
+        """Default row height as a fraction of page height."""
         match self:
             case PageSize.LETTER:
                 return 0.035
@@ -84,6 +93,7 @@ class PageSize(Enum):
 
     @property
     def margins(self) -> Tuple[float, float, float, float]:  # L, R, T, B
+        """Default margins as (left, right, top, bottom) fractions."""
         match self:
             case PageSize.LETTER:
                 return 0.07, 0.93, 0.90, 0.10
@@ -95,11 +105,19 @@ class PageSize(Enum):
 
 @dataclass
 class PageColors:
+    """Color configuration for page title and page numbers."""
+
     page_num: str
     title: str
 
 
 class PageConfiguration:
+    """Layout settings for PDF page creation.
+
+    Stores page size/orientation, margins, colors, and optional header/footer
+    callbacks used by `PDFDocument` when creating pages.
+    """
+
     def __init__(
         self,
         page_size: PageSize,
@@ -111,6 +129,18 @@ class PageConfiguration:
         header_func: Optional[Callable[[PDFDocument.Page, str, bool], None]] = None,
         footer_func: Optional[Callable[[PDFDocument.Page], None]] = None,
     ):
+        """Initialize page configuration values.
+
+        Args:
+            page_size: Page size (e.g., Letter, A4).
+            orientation: Page orientation (landscape or portrait).
+            colors: Title and page number colors.
+            margins: Margins as (left, right, top, bottom) fractions.
+            line_height: Optional line height override (fraction of page height).
+            row_height: Optional row height override (fraction of page height).
+            header_func: Optional callback for header rendering.
+            footer_func: Optional callback for footer rendering.
+        """
         self.page_size = page_size
         self.orientation = orientation
         self.colors = colors
@@ -156,8 +186,12 @@ class PageConfiguration:
 
 
 class PDFDocument:
+    """PDF document builder with optional table-of-contents support."""
+
     @dataclass
     class Page:
+        """Container for a rendered page and metadata."""
+
         pdf_doc: PDFDocument
         fig: Figure
         layout_engine: ConstrainedLayoutEngine
@@ -176,6 +210,11 @@ class PDFDocument:
 
         @classmethod
         def renumber_pages(cls, pdf_doc: PDFDocument) -> None:
+            """Assign page indices and displayed page numbers.
+
+            Inserts TOC pages after `page_count_before_toc` and updates page
+            numbering for both content and TOC pages.
+            """
             displayed_page_num = 0
             page_index = 0
 
@@ -202,6 +241,16 @@ class PDFDocument:
             start_index: int,
             entry_count: int,
         ) -> Tuple[List[PDFDocument.Page], int]:
+            """Return TOC entries starting at `start_index`.
+
+            Args:
+                pages: All document pages.
+                start_index: Index to begin scanning for entries.
+                entry_count: Maximum number of entries to include.
+
+            Returns:
+                Tuple of (entries, next_start_index).
+            """
             entries: List[PDFDocument.Page] = []
             i = start_index
             included_count = 0
@@ -220,6 +269,8 @@ class PDFDocument:
 
     @dataclass
     class TOCPage:
+        """Container for a Table of Contents page and its entries."""
+
         fig: Figure
         entries: List[PDFDocument.Page]
         is_last_toc_page: bool
@@ -260,6 +311,13 @@ class PDFDocument:
         page_configuration: PageConfiguration,
         page_count_before_toc: int = 0,
     ):
+        """Create a PDF document with the given configuration.
+
+        Args:
+            doc_title: Title used for metadata and TOC labeling.
+            page_configuration: Layout configuration for new pages.
+            page_count_before_toc: Page count to keep before the TOC insertion.
+        """
         self.doc_title = doc_title
         self._page_configuration = page_configuration
         self._page_count_before_toc = page_count_before_toc
@@ -292,6 +350,7 @@ class PDFDocument:
 
     @property
     def content(self) -> List[Figure]:
+        """Return the list of page figures in document order."""
         return [p.fig for p in self.pages]
 
     def create_new_page(
@@ -305,6 +364,21 @@ class PDFDocument:
         parent_page: Optional[PDFDocument.Page] = None,
         is_toc_page: bool = False,
     ) -> PDFDocument.Page:
+        """Create and register a new page with layout settings.
+
+        Args:
+            page_name: Display name for the page.
+            include_header: Whether to render the header.
+            include_footer: Whether to render the footer.
+            include_in_page_numbering: Whether to include in page numbering.
+            print_page_name: Whether the header should print the page name.
+            include_in_index: Whether to include in the TOC.
+            parent_page: Optional parent for continuation pages.
+            is_toc_page: Whether this page is a TOC page (not appended to pages list).
+
+        Returns:
+            The created `PDFDocument.Page` instance.
+        """
         pc = self._page_configuration
         fig = plt.figure(figsize=pc.page_dimensions)
         layout_engine = ConstrainedLayoutEngine(rect=pc.content_dimensions)
@@ -342,6 +416,7 @@ class PDFDocument:
         return pdf_page
 
     def create_continuation_page(self, page: PDFDocument.Page) -> PDFDocument.Page:
+        """Create a continuation page that inherits settings from `page`."""
         return self.create_new_page(
             page_name=page.page_name,
             include_header=page.include_header,
@@ -353,6 +428,7 @@ class PDFDocument:
         )
 
     def _render_page_numbers(self) -> None:
+        """Render page numbers onto all document and TOC pages."""
         pc = self._page_configuration
         y_pos = 0.93
 
@@ -390,6 +466,11 @@ class PDFDocument:
             )
 
     def render_table_of_contents(self) -> None:
+        """Build and render the table of contents pages.
+
+        Creates TOC figures, draws entries, updates page numbering, and
+        writes a temporary TOC PDF used later during `save`.
+        """
         pc = self._page_configuration
         include_in_toc_count = sum(p.include_in_index for p in self.pages)
         included_in_toc_count = 0
@@ -545,6 +626,16 @@ class PDFDocument:
         c.save()
 
     def save(self, filepath: Path, filename: str, **kwargs: Any) -> Path:
+        """Save the document to disk, merging TOC and content pages.
+
+        Args:
+            filepath: Target directory.
+            filename: File name without extension.
+            **kwargs: Additional options passed to `save_pdf`.
+
+        Returns:
+            Path to the final PDF file.
+        """
         temp_dir = tempfile.gettempdir()
         temp_main_pdf_filepath = Path(temp_dir) / f"temp_main_{filename}"
         main_pdf_path = save_pdf(self.content, temp_main_pdf_filepath, filename, **kwargs)
@@ -595,6 +686,7 @@ def _get_pdf_fullpath(
     filepath: Path,
     filename: str,
 ) -> Path:
+    """Return the full .pdf path, ensuring the directory exists."""
     filepath.mkdir(parents=True, exist_ok=True)
     return filepath / f"{filename}.pdf"
 
