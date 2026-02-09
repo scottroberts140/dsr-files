@@ -10,6 +10,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Breaking
 - Version reset to 1.0.0 to reflect non-backward-compatible changes across the library.
 
-### Tests
-- Updated CSV/JSON/JOBLIB handler tests to match current save/load signatures.
-- Added JSON safety conversion coverage and missing-file error assertions.
+### Fixed
+- Tests and documentation aligned with current save/load helper signatures.

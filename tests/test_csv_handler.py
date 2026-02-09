@@ -37,10 +37,8 @@ def test_save_and_load_csv(sample_df: pd.DataFrame) -> None:
     """Test saving and loading CSV files."""
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = Path(tmpdir)
-        filename = "test"
-
-        saved_path = csv_handler.save_csv(sample_df, filepath, filename)
-        loaded_df = csv_handler.load_csv(saved_path)
+        csv_handler.save_csv(sample_df, filepath, "test")
+        loaded_df = csv_handler.load_csv(filepath / "test.csv")
 
         pd.testing.assert_frame_equal(loaded_df, sample_df)
 
@@ -49,9 +47,7 @@ def test_save_csv_from_dict(sample_data: dict[str, list[int]]) -> None:
     """Test saving CSV directly from dictionary."""
     with tempfile.TemporaryDirectory() as tmpdir:
         filepath = Path(tmpdir)
-        filename = "test"
-
-        saved_path = csv_handler.save_csv(sample_data, filepath, filename)
-        loaded_df = csv_handler.load_csv(saved_path)
+        csv_handler.save_csv(sample_data, filepath, "test")
+        loaded_df = csv_handler.load_csv(filepath / "test.csv")
 
         assert len(loaded_df) == 3
