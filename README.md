@@ -14,6 +14,7 @@ File handling library for creating, saving, and loading various file types.
 - **CSV**: Read and write CSV files with pandas
 - **JSON**: Save and load JSON data structures
 - **JOBLIB**: Serialize Python objects with joblib
+- **Excel**: Save and load Excel workbooks (single or multi-sheet)
 - **PDF**: Generate PDF documents with text content
 
 ## Installation
@@ -75,6 +76,30 @@ save_joblib(model, Path("."), "model")
 
 # Load from JOBLIB
 model = load_joblib(Path("model.joblib"))
+```
+
+### Excel Operations
+
+```python
+from dsr_files import save_excel, load_excel, ExcelSheetConfig
+from pathlib import Path
+import pandas as pd
+
+sales = pd.DataFrame({"region": ["NA", "EU"], "revenue": [120, 95]})
+costs = pd.DataFrame({"region": ["NA", "EU"], "cost": [80, 70]})
+
+# Save multi-sheet workbook
+save_excel(
+	[
+		ExcelSheetConfig(data=sales, sheet_name="Sales"),
+		ExcelSheetConfig(data=costs, sheet_name="Costs"),
+	],
+	Path("."),
+	"report",
+)
+
+# Load first sheet
+df = load_excel(Path("report.xlsx"))
 ```
 
 ### PDF Operations
