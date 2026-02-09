@@ -1,7 +1,7 @@
 # dsr-files
 
 [![PyPI version](https://img.shields.io/pypi/v/dsr-files.svg?cacheSeconds=300)](https://pypi.org/project/dsr-files/)
-[![Python versions](https://img.shields.io/pypi/pyversions/dsr-files.svg?cacheSeconds=300)](https://pypi.org/project/dsr-files/)
+[![Python versions](https://img.shields.io/pypi/pyversions/dsr-files.svg?cacheSeconds=300&v=2)](https://pypi.org/project/dsr-files/)
 [![License](https://img.shields.io/pypi/l/dsr-files.svg?cacheSeconds=300)](https://pypi.org/project/dsr-files/)
 [![Changelog](https://img.shields.io/badge/changelog-available-blue.svg)](https://github.com/scottroberts140/dsr-files/releases)
 
