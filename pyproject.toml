@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsr-files"
-version = "1.0.3"
+version = "2.0.0"
 description = "File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -25,6 +25,8 @@ dependencies = [
     "joblib>=1.0.0",
     "reportlab>=3.6.0",
     "pypdf>=4.0.0",
+    "matplotlib>=3.0.0",
+    "pillow>=9.0.0",
 ]
 
 [project.optional-dependencies]
@@ -34,6 +36,10 @@ dev = [
     "black>=22.0.0",
     "flake8>=4.0.0",
     "mypy>=0.950",
+]
+excel = [
+    "openpyxl>=3.0.0",
+    "xlsxwriter>=3.0.0",
 ]
 
 [tool.setuptools.packages.find]

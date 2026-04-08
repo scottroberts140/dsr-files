@@ -2,6 +2,8 @@
 
 import pytest
 from pathlib import Path
+from datetime import datetime, date
+import numpy as np
 import tempfile
 from dsr_files import json_handler
 
@@ -38,3 +40,23 @@ def test_save_json_with_indent(sample_data: dict[str, int | str]) -> None:
             content = f.read()
 
         assert "    " in content  # Check for 4-space indent
+
+
+def test_to_json_safe_complex_types() -> None:
+    """Test serialization of complex types (Path, datetime, numpy)."""
+    complex_data = {
+        "path": Path("/tmp/test"),
+        "date": date(2023, 1, 1),
+        "datetime": datetime(2023, 1, 1, 12, 0, 0),
+        "numpy_int": np.int64(42),
+        "numpy_float": np.float64(3.14),
+        "numpy_bool": np.bool_(True),
+    }
+
+    safe_data = json_handler.to_JSON_safe(complex_data)
+
+    assert isinstance(safe_data["path"], str)
+    assert isinstance(safe_data["date"], str)
+    assert isinstance(safe_data["numpy_int"], int)
+    assert isinstance(safe_data["numpy_float"], float)
+    assert safe_data["numpy_bool"] is True

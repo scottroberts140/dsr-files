@@ -26,15 +26,30 @@ from dsr_files.joblib_handler import (
     save_joblib,
     load_joblib,
 )
-from dsr_files.pdf_handler import (
-    save_pdf,
-    load_pdf,
-    PageOrientation,
-    PageSize,
-    PageColors,
-    PageConfiguration,
-    PDFDocument,
-)
+from dsr_files.utils import validate_extension
+
+try:
+    from dsr_files.pdf_handler import (
+        save_pdf,
+        load_pdf,
+        PageOrientation,
+        PageSize,
+        PageColors,
+        PageConfiguration,
+        PDFDocument,
+    )
+except ImportError:
+    # Define placeholders if PDF dependencies are missing
+    def _missing_pdf_dependency(*args, **kwargs):
+        raise ImportError("PDF dependencies are missing. Install with 'pip install dsr-files[pdf]'")
+
+    save_pdf = _missing_pdf_dependency
+    load_pdf = _missing_pdf_dependency
+    PageOrientation = None
+    PageSize = None
+    PageColors = None
+    PageConfiguration = None
+    PDFDocument = None
 
 __all__ = [
     "FileType",
@@ -51,6 +66,7 @@ __all__ = [
     "to_JSON_safe",
     "save_joblib",
     "load_joblib",
+    "validate_extension",
     "save_pdf",
     "load_pdf",
     "PageOrientation",
@@ -60,4 +76,4 @@ __all__ = [
     "PDFDocument",
 ]
 
-__version__ = "1.0.3"
+__version__ = "2.0.0"

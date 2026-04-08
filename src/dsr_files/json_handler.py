@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any, Optional
 import json
+from dsr_files.utils import validate_extension
 
 
 def create_json(data: dict[str, Any]) -> dict[str, Any]:
@@ -20,7 +21,7 @@ def create_json(data: dict[str, Any]) -> dict[str, Any]:
 
 def save_json(
     data: dict[str, Any],
-    filepath: Path,
+    output_dir: Path,
     filename: str,
     indent: Optional[int] = 2,
     encoding: str = "utf-8",
@@ -31,7 +32,7 @@ def save_json(
 
     Args:
         data: Dictionary to save
-        filepath: Path to save the file
+        output_dir: Directory to save the file
         filename: Name of the file (without the extension)
         indent: JSON indentation level
         encoding: File encoding (default: utf-8)
@@ -40,9 +41,9 @@ def save_json(
     Returns:
         Path to the saved JSON file
     """
-    filepath.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
     safe_data = to_JSON_safe(data)
-    full_path = Path(filepath) / f"{filename}.json"
+    full_path = output_dir / f"{filename}.json"
     with open(full_path, "w", encoding=encoding) as f:
         json.dump(safe_data, f, indent=indent, **kwargs)
     return full_path
@@ -64,6 +65,9 @@ def load_json(
     Returns:
         Dictionary loaded from JSON file
     """
+    validate_extension(filepath, ".json")
+    if not Path(filepath).exists():
+        raise FileNotFoundError(f"File not found: {filepath}")
     with open(filepath, "r", encoding=encoding) as f:
         return json.load(f, **kwargs)
 

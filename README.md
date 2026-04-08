@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types.
 
-**Version 1.0.0**: This release is breaking and not backward-compatible with prior 0.x versions.
+**Version 2.0.0**: Major release with API changes and optional dependencies.
 
 ## Features
 
@@ -23,10 +23,24 @@ File handling library for creating, saving, and loading various file types.
 pip install dsr-files
 ```
 
+### Optional Dependencies
+
+For Excel support:
+
+```bash
+pip install dsr-files[excel]
+```
+
+For PDF support:
+
+```bash
+pip install dsr-files[pdf]
+```
+
 ## Development Installation
 
 ```bash
-pip install -e ".[dev]"
+pip install -e ".[dev,excel,pdf]"
 ```
 
 ## Usage

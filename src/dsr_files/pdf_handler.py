@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 from matplotlib.figure import Figure
 from matplotlib.layout_engine import ConstrainedLayoutEngine
 import matplotlib.font_manager as fm
-from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
@@ -544,7 +543,7 @@ class PDFDocument:
             c.showPage()
         c.save()
 
-    def save(self, filepath: Path, filename: str, **kwargs: Any) -> Path:
+    def save(self, output_dir: Path, filename: str, **kwargs: Any) -> Path:
         temp_dir = tempfile.gettempdir()
         temp_main_pdf_filepath = Path(temp_dir) / f"temp_main_{filename}"
         main_pdf_path = save_pdf(self.content, temp_main_pdf_filepath, filename, **kwargs)
@@ -580,7 +579,7 @@ class PDFDocument:
             writer.add_page(main_reader.pages[i])
 
         # Write merged file
-        full_path = _get_pdf_fullpath(filepath, filename)
+        full_path = _get_pdf_fullpath(output_dir, filename)
 
         with open(full_path, "wb") as f:
             writer.write(f)
@@ -592,16 +591,16 @@ class PDFDocument:
 
 
 def _get_pdf_fullpath(
-    filepath: Path,
+    output_dir: Path,
     filename: str,
 ) -> Path:
-    filepath.mkdir(parents=True, exist_ok=True)
-    return filepath / f"{filename}.pdf"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    return output_dir / f"{filename}.pdf"
 
 
 def save_pdf(
     content: Union[str, List[str], List[Figure]],
-    filepath: Path,
+    output_dir: Path,
     filename: str,
     **kwargs: Any,
 ) -> Path:
@@ -610,11 +609,11 @@ def save_pdf(
 
     Args:
         content: Text string or list of text strings to write
-        filepath: Path to save the PDF file
+        output_dir: Directory to save the PDF file
         filename: Name of the file (without extension)
         **kwargs: Additional arguments for canvas creation
     """
-    full_path = _get_pdf_fullpath(filepath, filename)
+    full_path = _get_pdf_fullpath(output_dir, filename)
 
     # Handle Matplotlib Figures
     if isinstance(content, list) and len(content) > 0 and isinstance(content[0], Figure):

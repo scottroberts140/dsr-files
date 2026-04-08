@@ -3,14 +3,15 @@
 from pathlib import Path
 import pandas as pd
 from dataclasses import dataclass
-from typing import Any, Optional, List, Union, Literal, Dict
+from typing import Any, Literal
 import logging
+from dsr_files.utils import validate_extension
 
 # Define a type alias for the supported engines
 ExcelEngine = Literal["xlsxwriter", "openpyxl", "odf", "auto"]
 
 
-def create_excel(data: Union[pd.DataFrame, Dict[Any, Any], List[Any]]) -> pd.DataFrame:
+def create_excel(data: pd.DataFrame | dict[Any, Any] | list[Any]) -> pd.DataFrame:
     """
     Create a DataFrame from various inputs.
 
@@ -34,17 +35,17 @@ def create_excel(data: Union[pd.DataFrame, Dict[Any, Any], List[Any]]) -> pd.Dat
 class ExcelSheetConfig:
     """Configuration for an individual sheet in an Excel workbook."""
 
-    data: Union[pd.DataFrame, Dict[Any, Any], List[Any]]
+    data: pd.DataFrame | dict[Any, Any] | list[Any]
     sheet_name: str
     index: bool = False
     header: bool = True
 
 
 def save_excel(
-    data: Union[pd.DataFrame, List[ExcelSheetConfig]],
-    filepath: Path,
+    data: pd.DataFrame | list[ExcelSheetConfig],
+    output_dir: Path,
     filename: str,
-    engine: ExcelEngine = "xlsxwriter",
+    engine: ExcelEngine = "auto",
     **kwargs: Any,
 ) -> Path:
     """
@@ -52,7 +53,7 @@ def save_excel(
 
     Args:
         data: Either a DataFrame for single-sheet or list of ExcelSheetConfig for multi-sheet
-        filepath: Path to save the file
+        output_dir: Directory to save the file
         filename: Name of the file (without the extension)
         engine: Excel writing engine (xlsxwriter, openpyxl, odf, or auto)
         **kwargs: Additional arguments passed to DataFrame.to_excel() for single-sheet mode
@@ -60,14 +61,17 @@ def save_excel(
     Returns:
         Path to the saved Excel file
     """
-    filepath.mkdir(parents=True, exist_ok=True)
-    full_path = filepath / f"{filename}.xlsx"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    full_path = output_dir / f"{filename}.xlsx"
+
+    # Map 'auto' to None so pandas uses its default detection (usually openpyxl)
+    write_engine = None if engine == "auto" else engine
 
     try:
         if isinstance(data, pd.DataFrame):
-            data.to_excel(full_path, engine=engine, **kwargs)
+            data.to_excel(full_path, engine=write_engine, **kwargs)
         else:
-            with pd.ExcelWriter(full_path, engine=engine) as writer:
+            with pd.ExcelWriter(full_path, engine=write_engine) as writer:
                 for sheet_cfg in data:
                     df = create_excel(sheet_cfg.data)
                     df.to_excel(
@@ -99,4 +103,7 @@ def load_excel(
     Returns:
         pandas DataFrame loaded from Excel file
     """
+    validate_extension(filepath, [".xlsx", ".xls", ".xlsm", ".ods"])
+    if not Path(filepath).exists():
+        raise FileNotFoundError(f"File not found: {filepath}")
     return pd.read_excel(filepath, sheet_name=sheet_name, **kwargs)

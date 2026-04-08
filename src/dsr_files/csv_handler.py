@@ -3,6 +3,7 @@
 from pathlib import Path
 from typing import Any, Optional
 import pandas as pd
+from dsr_files.utils import validate_extension
 
 
 def create_csv(data: dict[str, Any] | pd.DataFrame) -> pd.DataFrame:
@@ -22,7 +23,7 @@ def create_csv(data: dict[str, Any] | pd.DataFrame) -> pd.DataFrame:
 
 def save_csv(
     data: pd.DataFrame | dict[str, Any],
-    filepath: Path,
+    output_dir: Path,
     filename: str,
     index: bool = False,
     encoding: str = "utf-8",
@@ -33,7 +34,7 @@ def save_csv(
 
     Args:
         data: DataFrame or dictionary to save
-        filepath: Path to save the file
+        output_dir: Directory to save the file
         filename: Name of the file (without the extension)
         index: Whether to write row indices
         encoding: File encoding (default: utf-8)
@@ -42,8 +43,8 @@ def save_csv(
     Returns:
         Path to the saved CSV file
     """
-    filepath.mkdir(parents=True, exist_ok=True)
-    full_path = Path(filepath) / f"{filename}.csv"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    full_path = output_dir / f"{filename}.csv"
     df = create_csv(data) if isinstance(data, dict) else data
     df.to_csv(full_path, index=index, encoding=encoding, **kwargs)
     return full_path
@@ -65,4 +66,7 @@ def load_csv(
     Returns:
         pandas DataFrame
     """
+    validate_extension(filepath, ".csv")
+    if not Path(filepath).exists():
+        raise FileNotFoundError(f"File not found: {filepath}")
     return pd.read_csv(filepath, encoding=encoding, **kwargs)
