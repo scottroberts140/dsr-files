@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 2.2.0**: Added Parquet support, modernized type hinting, and standardized NumPy-style documentation.
+**Version 2.0.0**: Added Parquet support, modernized type hinting, and standardized NumPy-style documentation.
 
 ## Features
 
