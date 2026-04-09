@@ -1,32 +1,39 @@
 """Tests for JOBLIB handler."""
 
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
 from dsr_files import joblib_handler
 
 
 @pytest.fixture
-def sample_data() -> dict[str, list[int]]:
-    """Sample data for testing."""
-    return {"model": [1, 2, 3, 4, 5], "metadata": {"name": "test"}}
+def complex_data():
+    """Sample complex Python object for serialization testing."""
+    return [{"id": 1, "metadata": [1.1, 2.2]}, {"id": 2, "metadata": {"status": "active"}}]
 
 
-def test_save_and_load_joblib(sample_data: dict[str, list[int]]) -> None:
-    """Test saving and loading JOBLIB files."""
+def test_save_and_load_joblib(complex_data):
+    """Verify round-trip saving and loading of Python objects."""
     with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir)
-        joblib_handler.save_joblib(sample_data, filepath, "test")
-        loaded_data = joblib_handler.load_joblib(filepath / "test.joblib")
+        dir_path = Path(tmpdir)
+        filename = "test_model"
 
-        assert loaded_data == sample_data
+        saved_path = joblib_handler.save_joblib(complex_data, dir_path, filename)
+        assert saved_path.exists()
+        assert saved_path.suffix == ".joblib"
+
+        loaded_data = joblib_handler.load_joblib(saved_path)
+        assert loaded_data == complex_data
 
 
-def test_save_joblib_with_compression(sample_data: dict[str, list[int]]) -> None:
-    """Test saving JOBLIB with compression."""
-    with tempfile.TemporaryDirectory() as tmpdir:
-        filepath = Path(tmpdir)
-        joblib_handler.save_joblib(sample_data, filepath, "test", compress=9)
-        loaded_data = joblib_handler.load_joblib(filepath / "test.joblib")
+def test_load_joblib_invalid_extension():
+    """Verify ValueError on incorrect file extension."""
+    with pytest.raises(ValueError):
+        joblib_handler.load_joblib("model.pkl")
 
-        assert loaded_data == sample_data
+
+def test_load_joblib_not_found():
+    """Verify FileNotFoundError for missing files."""
+    with pytest.raises(FileNotFoundError):
+        joblib_handler.load_joblib("missing_model.joblib")

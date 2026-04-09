@@ -1,34 +1,42 @@
 """PDF file handling operations."""
 
 from __future__ import annotations
+
+import io
+import tempfile
+from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
-from typing import Any, Optional, Union, List, Tuple, Callable
-from dataclasses import dataclass
-from reportlab.lib.pagesizes import letter, A4
-from reportlab.pdfgen import canvas
-from matplotlib.backends.backend_pdf import PdfPages
+from typing import Any, Callable, List, Optional, Tuple, Union
+
+import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+from dsr_files.utils import validate_extension
+from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.layout_engine import ConstrainedLayoutEngine
-import matplotlib.font_manager as fm
+from PIL import ImageColor
+from pypdf import PdfReader, PdfWriter
+from pypdf.annotations import Link
+from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.utils import ImageReader
-import tempfile
-from pypdf import PdfWriter, PdfReader
-from pypdf.annotations import Link
-from pypdf.generic import ArrayObject, FloatObject, NameObject
-from PIL import ImageColor
-import io
+from reportlab.pdfgen import canvas
 
 
 class PageOrientation(Enum):
+    """Enumeration for page orientation types."""
+
     LANDSCAPE = auto()
     PORTRAIT = auto()
 
 
 class PageSize(Enum):
+    """
+    Standard page sizes and their associated physical dimensions.
+    """
+
     LETTER = auto()
     A4 = auto()
 
@@ -42,6 +50,19 @@ class PageSize(Enum):
         raise NotImplementedError(f"Dimensions for page size {self.name} not implemented.")
 
     def width(self, orientation: PageOrientation) -> float:
+        """
+        Return the page width based on orientation.
+
+        Parameters
+        ----------
+        orientation : PageOrientation
+            The orientation (Landscape or Portrait).
+
+        Returns
+        -------
+        float
+            The width in inches.
+        """
         w, h = self._portrait_dimensions()
         match orientation:
             case PageOrientation.LANDSCAPE:
@@ -52,6 +73,19 @@ class PageSize(Enum):
         raise NotImplementedError(f"Dimensions for orientation {orientation.name} not implemented.")
 
     def height(self, orientation: PageOrientation) -> float:
+        """
+        Return the page height based on orientation.
+
+        Parameters
+        ----------
+        orientation : PageOrientation
+            The orientation (Landscape or Portrait).
+
+        Returns
+        -------
+        float
+            The height in inches.
+        """
         w, h = self._portrait_dimensions()
         match orientation:
             case PageOrientation.LANDSCAPE:
@@ -63,6 +97,14 @@ class PageSize(Enum):
 
     @property
     def line_height(self) -> float:
+        """
+        Return the line height based on orientation.
+
+        Returns
+        -------
+        float
+            The line height as a percentage of the page height.
+        """
         match self:
             case PageSize.LETTER:
                 return 0.03
@@ -73,6 +115,14 @@ class PageSize(Enum):
 
     @property
     def row_height(self) -> float:
+        """
+        Return the row height based on orientation.
+
+        Returns
+        -------
+        float
+            The row height as a percentage of the page height.
+        """
         match self:
             case PageSize.LETTER:
                 return 0.035
@@ -83,6 +133,14 @@ class PageSize(Enum):
 
     @property
     def margins(self) -> Tuple[float, float, float, float]:  # L, R, T, B
+        """
+        Return the margins based on orientation.
+
+        Returns
+        -------
+        tuple of float
+            A tuple containing (left, right, top, bottom) margins as a percentage of the page width/height.
+        """
         match self:
             case PageSize.LETTER:
                 return 0.07, 0.93, 0.90, 0.10
@@ -94,6 +152,17 @@ class PageSize(Enum):
 
 @dataclass
 class PageColors:
+    """
+    Color configuration for PDF page elements.
+
+    Attributes
+    ----------
+    page_num : str
+        Hex color code or name for the page number text.
+    title : str
+        Hex color code or name for the page titles.
+    """
+
     page_num: str
     title: str
 
@@ -110,6 +179,31 @@ class PageConfiguration:
         header_func: Optional[Callable[[PDFDocument.Page, str, bool], None]] = None,
         footer_func: Optional[Callable[[PDFDocument.Page], None]] = None,
     ):
+        """
+        Layout and styling settings for a PDF document.
+
+        This class defines the physical dimensions, margins, and functional
+        hooks used to render every page in the document consistently.
+
+        Parameters
+        ----------
+        page_size : PageSize
+            The physical dimensions (e.g., Letter, A4).
+        orientation : PageOrientation
+            The page layout (Landscape or Portrait).
+        colors : PageColors
+            Color theme for text elements.
+        margins : Tuple[float, float, float, float]
+            Page margins as decimal percentages of page size (Left, Right, Top, Bottom).
+        line_height : Optional[float], default None
+            Line height ratio; defaults to the page_size default if None.
+        row_height : Optional[float], default None
+            Row height ratio; defaults to the page_size default if None.
+        header_func : Optional[Callable], default None
+            Function to render headers: (Page, title_str, show_title_bool) -> None.
+        footer_func : Optional[Callable], default None
+            Function to render footers: (Page) -> None.
+        """
         self.page_size = page_size
         self.orientation = orientation
         self.colors = colors
@@ -155,8 +249,56 @@ class PageConfiguration:
 
 
 class PDFDocument:
+    """
+    Orchestrates the creation of multi-page, interactive PDF reports.
+
+    This class manages the generation of Matplotlib-based content pages,
+    an automated Table of Contents with clickable links, and the final
+    merging of document components.
+    """
+
     @dataclass
     class Page:
+        """
+        Represents a single content page within the PDF document.
+
+        Each page contains a Matplotlib figure and associated metadata for
+        indexing, numbering, and rendering.
+
+        Attributes
+        ----------
+        pdf_doc : PDFDocument
+            The parent document instance.
+        fig : Figure
+            The Matplotlib figure associated with this page.
+        layout_engine : ConstrainedLayoutEngine
+            The layout manager for the figure's content.
+        page_name : str
+            The name/title of the page for the TOC and headers.
+        include_header : bool, default True
+            Whether to render the document header.
+        include_footer : bool, default True
+            Whether to render the document footer.
+        include_in_page_numbering : bool, default True
+            Whether this page counts toward the displayed page count.
+        print_page_name : bool, default True
+            Whether to explicitly print the page name in the header area.
+        include_in_index : bool, default True
+            Whether to include this page in the Table of Contents.
+        displayed_page_number : Optional[int], default None
+            The calculated page number shown on the final document.
+        page_index : int, default 0
+            The 0-based position of the page in the final merged PDF.
+        continuation_text : str, default ""
+            Text appended to titles for continued pages (e.g., "(Continued)").
+        continuation_page_top_y : float, default 1.0
+            The Y-coordinate for content start on continuation pages.
+        parent_page : Optional[PDFDocument.Page], default None
+            The original page object if this is a continuation page.
+        toc_rect : Tuple[int, int, int, int], default (0, 0, 0, 0)
+            Coordinates for the clickable link in the TOC (points).
+        """
+
         pdf_doc: PDFDocument
         fig: Figure
         layout_engine: ConstrainedLayoutEngine
@@ -175,6 +317,17 @@ class PDFDocument:
 
         @classmethod
         def renumber_pages(cls, pdf_doc: PDFDocument) -> None:
+            """
+            Recalculate page indices and displayed numbers across the document.
+
+            This method accounts for TOC pages inserted between pre-TOC
+            content and the main report body.
+
+            Parameters
+            ----------
+            pdf_doc : PDFDocument
+                The document instance containing pages to renumber.
+            """
             displayed_page_num = 0
             page_index = 0
 
@@ -201,6 +354,24 @@ class PDFDocument:
             start_index: int,
             entry_count: int,
         ) -> Tuple[List[PDFDocument.Page], int]:
+            """
+            Group pages into batches for rendering on TOC pages.
+
+            Parameters
+            ----------
+            pages : List[PDFDocument.Page]
+                The list of all document pages.
+            start_index : int
+                The index of the first page to consider for this TOC page.
+            entry_count : int
+                The maximum number of entries that fit on the current TOC page.
+
+            Returns
+            -------
+            Tuple[List[PDFDocument.Page], int]
+                A list of pages included in this TOC section and the index of
+                the next page to be processed.
+            """
             entries: List[PDFDocument.Page] = []
             i = start_index
             included_count = 0
@@ -219,6 +390,23 @@ class PDFDocument:
 
     @dataclass
     class TOCPage:
+        """
+        Metadata for a generated Table of Contents page.
+
+        Attributes
+        ----------
+        fig : Figure
+            The Matplotlib figure serving as the background for the TOC page.
+        entries : List[PDFDocument.Page]
+            The specific document pages indexed on this TOC page.
+        is_last_toc_page : bool
+            Indicator used for layout or numbering logic on the final TOC page.
+        actual_page_number : int, default 0
+            The physical 0-based index in the final PDF.
+        displayed_page_number : int, default 0
+            The human-readable page number shown in the footer/header.
+        """
+
         fig: Figure
         entries: List[PDFDocument.Page]
         is_last_toc_page: bool
@@ -304,6 +492,22 @@ class PDFDocument:
         parent_page: Optional[PDFDocument.Page] = None,
         is_toc_page: bool = False,
     ) -> PDFDocument.Page:
+        """
+        Initialize a new Matplotlib figure as a document page.
+
+        Parameters
+        ----------
+        page_name : str
+            The title of the page used in headers and the TOC.
+        include_header : bool, default True
+            Whether to render the document header.
+        # ... (rest of params documented in NumPy style)
+
+        Returns
+        -------
+        PDFDocument.Page
+            The initialized page object.
+        """
         pc = self._page_configuration
         fig = plt.figure(figsize=pc.page_dimensions)
         layout_engine = ConstrainedLayoutEngine(rect=pc.content_dimensions)
@@ -341,6 +545,23 @@ class PDFDocument:
         return pdf_page
 
     def create_continuation_page(self, page: PDFDocument.Page) -> PDFDocument.Page:
+        """
+        Create a new page that continues the content of an existing page.
+
+        This is used when content (like a large table) overflows the current page.
+        The new page inherits the properties of the parent but is typically
+        excluded from the Table of Contents to avoid redundancy.
+
+        Parameters
+        ----------
+        page : PDFDocument.Page
+            The parent page to be continued.
+
+        Returns
+        -------
+        PDFDocument.Page
+            A new page instance configured as a continuation.
+        """
         return self.create_new_page(
             page_name=page.page_name,
             include_header=page.include_header,
@@ -352,6 +573,13 @@ class PDFDocument:
         )
 
     def _render_page_numbers(self) -> None:
+        """
+        Iterate through all document and TOC pages to render page number text.
+
+        This method applies the page number to the top-right margin of every
+        page designated for numbering, using the colors defined in the
+        document's PageConfiguration.
+        """
         pc = self._page_configuration
         y_pos = 0.93
 
@@ -389,6 +617,19 @@ class PDFDocument:
             )
 
     def render_table_of_contents(self) -> None:
+        """
+        Generate and render the interactive Table of Contents.
+
+        This method performs several high-level operations:
+        1. Calculates the number of TOC pages required based on the count of
+        indexable content pages.
+        2. Uses ReportLab to draw the TOC text, leader dots, and page numbers
+        over a Matplotlib-generated background.
+        3. Calculates the geometric rectangles for every TOC entry to enable
+        clickable hyperlinks in the final PDF.
+        4. Triggers the renumbering of all pages to ensure the TOC itself is
+        accounted for in the document flow.
+        """
         pc = self._page_configuration
         include_in_toc_count = sum(p.include_in_index for p in self.pages)
         included_in_toc_count = 0
@@ -544,6 +785,28 @@ class PDFDocument:
         c.save()
 
     def save(self, output_dir: Path, filename: str, **kwargs: Any) -> Path:
+        """
+        Compile and save the final interactive PDF document.
+
+        This method merges the main content pages with the generated Table
+        of Contents, injects clickable link annotations, and performs
+        clean-up of temporary rendering files.
+
+        Parameters
+        ----------
+        output_dir : Path
+            The destination directory for the final PDF.
+        filename : str
+            The base name of the file (extension '.pdf' is added).
+        **kwargs : Any
+            Additional keyword arguments passed to the underlying `save_pdf`
+            utility for main content rendering.
+
+        Returns
+        -------
+        Path
+            The full path to the successfully saved and merged PDF.
+        """
         temp_dir = tempfile.gettempdir()
         temp_main_pdf_filepath = Path(temp_dir) / f"temp_main_{filename}"
         main_pdf_path = save_pdf(self.content, temp_main_pdf_filepath, filename, **kwargs)
@@ -594,6 +857,21 @@ def _get_pdf_fullpath(
     output_dir: Path,
     filename: str,
 ) -> Path:
+    """
+    Generate the full destination path and ensure the parent directory exists.
+
+    Parameters
+    ----------
+    output_dir : Path
+        The directory where the PDF should be stored.
+    filename : str
+        The base name of the file (extension '.pdf' is appended automatically).
+
+    Returns
+    -------
+    Path
+        The validated full path to the PDF file.
+    """
     output_dir.mkdir(parents=True, exist_ok=True)
     return output_dir / f"{filename}.pdf"
 
@@ -605,13 +883,32 @@ def save_pdf(
     **kwargs: Any,
 ) -> Path:
     """
-    Save text content to PDF file.
+    Save text or Matplotlib figures to a PDF file.
 
-    Args:
-        content: Text string or list of text strings to write
-        output_dir: Directory to save the PDF file
-        filename: Name of the file (without extension)
-        **kwargs: Additional arguments for canvas creation
+    This utility handles two primary modes:
+    1. Direct rendering of Matplotlib Figures using `PdfPages`.
+    2. Basic text rendering using a ReportLab canvas with simple
+       pagination and title support.
+
+    Parameters
+    ----------
+    content : Union[str, List[str], List[Figure]]
+        The data to persist. Can be a raw string, a list of strings,
+        or a list of Matplotlib Figure objects.
+    output_dir : Path
+        The destination directory.
+    filename : str
+        The base name of the file (without extension).
+    **kwargs : Any
+        Additional configuration for text rendering:
+        - page_size : tuple, default letter (8.5x11 inches)
+        - margin : int, default 50 points
+        - title : str, optional document metadata title
+
+    Returns
+    -------
+    Path
+        The full path to the saved PDF file.
     """
     full_path = _get_pdf_fullpath(output_dir, filename)
 

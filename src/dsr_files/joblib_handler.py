@@ -1,7 +1,8 @@
 """JOBLIB file handling operations."""
 
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
+
 import joblib
 from dsr_files.utils import validate_extension
 
@@ -14,21 +15,33 @@ def save_joblib(
     **kwargs: Any,
 ) -> Path:
     """
-    Save data to JOBLIB file using joblib serialization.
+    Save a Python object to a JOBLIB file using joblib serialization.
 
-    Args:
-        data: Any Python object to save
-        output_dir: Directory to save the file
-        filename: Name of the file (without the extension)
-        compress: Compression level (0-9 or compression spec tuple)
-        **kwargs: Additional arguments passed to joblib.dump()
+    Parameters
+    ----------
+    data : Any
+        The Python object to persist (e.g., a trained model or a large array).
+    output_dir : Path
+        The destination directory.
+    filename : str
+        The base name of the file (extension '.joblib' is appended automatically).
+    compress : int | tuple[str, int], default 3
+        The compression level from 0 to 9, or a tuple specifying the
+        compression method and level.
+    **kwargs : Any
+        Additional keyword arguments passed directly to `joblib.dump()`.
 
-    Returns:
-        Path to the saved JOBLIB file
+    Returns
+    -------
+    Path
+        The full path to the saved JOBLIB file.
     """
     output_dir.mkdir(parents=True, exist_ok=True)
-    full_path = Path(output_dir) / f"{filename}.joblib"
-    joblib.dump(data, full_path, compress=compress, **kwargs)  # type: ignore[arg-type]
+    full_path = output_dir / f"{filename}.joblib"
+
+    # Cast compress to Any specifically for the call to satisfy the restrictive stub
+    joblib.dump(data, full_path, compress=cast(Any, compress), **kwargs)
+
     return full_path
 
 
@@ -37,16 +50,29 @@ def load_joblib(
     **kwargs: Any,
 ) -> Any:
     """
-    Load data from JOBLIB file.
+    Load and deserialize data from a JOBLIB file.
 
-    Args:
-        filepath: Path to JOBLIB file (string or Path object)
-        **kwargs: Additional arguments passed to joblib.load()
+    Parameters
+    ----------
+    filepath : str | Path
+        Path to the target JOBLIB file.
+    **kwargs : Any
+        Additional keyword arguments passed directly to `joblib.load()`.
 
-    Returns:
-        Deserialized Python object
+    Returns
+    -------
+    Any
+        The deserialized Python object.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the specified filepath does not exist on disk.
+    ValueError
+        If the file extension is not '.joblib'.
     """
     validate_extension(filepath, ".joblib")
+
     path_obj = Path(filepath)
     if not path_obj.exists():
         raise FileNotFoundError(f"File not found: {path_obj}")
