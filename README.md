@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 2.0.0**: Added Parquet support, modernized type hinting, and standardized NumPy-style documentation.
+**Version 2.1.0**: Added YAML support.
 
 ## Features
 
@@ -17,6 +17,7 @@ File handling library for creating, saving, and loading various file types (CSV,
 - **Excel**: Save and load Excel workbooks (single or multi-sheet)
 - **PDF**: Generate interactive, indexed audit reports with Matplotlib and ReportLab
 - **PARQUET**: High-performance columnar storage using PyArrow or FastParquet
+- **YAML**: Save and load YAML files, relying on recursive logic for nested dictionaries.
 
 ## Installation
 
@@ -153,6 +154,21 @@ save_parquet(df, Path("."), "data", engine="pyarrow")
 
 # Load from Parquet
 df = load_parquet(Path("data.parquet"))
+```
+
+### YAML Operations
+
+```python
+from dsr_files import save_yaml, load_yaml
+from pathlib import Path
+
+data = {"project": "dsr-orchestrator", "steps": ["ingest", "analyze"]}
+
+# Save to YAML
+save_yaml(data, Path("config.yaml"))
+
+# Load from YAML
+data = load_yaml(Path("config.yaml"))
 ```
 
 ## Testing

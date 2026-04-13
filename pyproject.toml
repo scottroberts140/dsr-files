@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsr-files"
-version = "2.0.0"
+version = "2.1.0"
 description = "File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -21,24 +21,27 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "pandas>=3.0.0",
-    "numpy>=2.1.0",
+    "pandas>=3.0.2",
+    "numpy>=2.4.4",
     "pyarrow>=23.0.1",       # Essential for high-performance Parquet handling
     "fastparquet>=2026.3.0", # Latest version as of March 2026
     "joblib>=1.4.0",
     "reportlab>=4.2.0",
     "pypdf>=6.9.2",          # Significant improvements in link annotations
-    "matplotlib>=3.10.0",
+    "matplotlib>=3.10.8",
     "pillow>=12.2.0",        # Latest image processing support
+    "pyyaml>=6.0.2",
 ]
 
 [project.optional-dependencies]
 dev = [
-    "pytest>=9.0.0",
+    "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
     "black>=26.3.1",     # Latest formatter for 2026 standards
     "flake8>=7.0.0",
     "mypy>=1.10.0",
+    "openpyxl>=3.1.4",
+    "xlsxwriter>=3.2.0",
 ]
 excel = ["openpyxl>=3.1.4", "xlsxwriter>=3.2.0"]
 

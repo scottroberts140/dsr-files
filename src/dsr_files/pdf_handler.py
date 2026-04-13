@@ -11,14 +11,13 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
-from dsr_files.utils import validate_extension
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.layout_engine import ConstrainedLayoutEngine
 from PIL import ImageColor
 from pypdf import PdfReader, PdfWriter
 from pypdf.annotations import Link
-from reportlab.lib.pagesizes import A4, letter
+from reportlab.lib.pagesizes import letter
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont

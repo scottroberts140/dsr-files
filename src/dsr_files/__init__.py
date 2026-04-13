@@ -1,42 +1,27 @@
 """
 dsr_files: File handling library for creating, saving, and loading various file types.
 
-Supports CSV, JSON, JOBLIB, Excel, and PDF file operations.
+Supports CSV, JSON, JOBLIB, PARQUET, YAML, Excel, and PDF file operations.
 """
 
+from dsr_files.csv_handler import create_csv, load_csv, save_csv
 from dsr_files.enums import FileType
-from dsr_files.csv_handler import (
-    save_csv,
-    load_csv,
-    create_csv,
-)
-from dsr_files.excel_handler import (
-    save_excel,
-    load_excel,
-    create_excel,
-    ExcelSheetConfig,
-)
-from dsr_files.json_handler import (
-    save_json,
-    load_json,
-    create_json,
-    to_JSON_safe,
-)
-from dsr_files.joblib_handler import (
-    save_joblib,
-    load_joblib,
-)
+from dsr_files.excel_handler import ExcelSheetConfig, create_excel, load_excel, save_excel
+from dsr_files.joblib_handler import load_joblib, save_joblib
+from dsr_files.json_handler import create_json, load_json, save_json, to_JSON_safe
+from dsr_files.parquet_handler import load_parquet, save_parquet
 from dsr_files.utils import validate_extension
+from dsr_files.yaml_handler import load_yaml, save_yaml
 
 try:
     from dsr_files.pdf_handler import (
-        save_pdf,
-        load_pdf,
-        PageOrientation,
-        PageSize,
         PageColors,
         PageConfiguration,
+        PageOrientation,
+        PageSize,
         PDFDocument,
+        load_pdf,
+        save_pdf,
     )
 except ImportError:
     # Define placeholders if PDF dependencies are missing
@@ -66,6 +51,10 @@ __all__ = [
     "to_JSON_safe",
     "save_joblib",
     "load_joblib",
+    "save_parquet",
+    "load_parquet",
+    "load_yaml",
+    "save_yaml",
     "validate_extension",
     "save_pdf",
     "load_pdf",
@@ -76,4 +65,4 @@ __all__ = [
     "PDFDocument",
 ]
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
