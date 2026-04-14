@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.2.0] - 2026-04-14
+
+### Added
+
+* **Strict YAML Loading**: Introduced the UniqueKeyLoader class to the yaml_handler module to prevent duplicate keys in configuration files.
+
+* **Integrity Validation**: The new loader ensures that human-edited YAML files (like recommendations.yaml) do not contain conflicting entries, which could otherwise lead to unpredictable model auditing behavior.
+
+* **Enhanced Error Reporting**: Implemented explicit raising of ConstructorError when duplicate keys are detected during the parsing phase, aiding in faster debugging for the "Human-in-the-Loop" workflow.
+
+### Changed
+
+* **Default Loader Strategy**: Updated internal yaml_handler functions to utilize the UniqueKeyLoader by default, standardizing configuration integrity across the project.
+
 ## [2.1.0] - 2026-04-13
 
 ### Added

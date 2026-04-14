@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 2.1.0**: Added YAML support.
+**Version 2.2.0**: Added UniqueKeyLoader to YAML operations to ensure configuration integrity by preventing duplicate keys in project files.
 
 ## Features
 
@@ -17,13 +17,20 @@ File handling library for creating, saving, and loading various file types (CSV,
 - **Excel**: Save and load Excel workbooks (single or multi-sheet)
 - **PDF**: Generate interactive, indexed audit reports with Matplotlib and ReportLab
 - **PARQUET**: High-performance columnar storage using PyArrow or FastParquet
-- **YAML**: Save and load YAML files, relying on recursive logic for nested dictionaries.
+- **YAML**: Save and load YAML files with recursive logic and **strict key validation** to prevent duplicate entries in configuration files.
 
 ## Installation
 
 ```bash
 pip install dsr-files
 ```
+
+## Requirements
+
+- **Python**: >= 3.10
+- **PyYAML**: >= 6.0.2
+- **Pandas**: Required for CSV and Excel operations
+- **Joblib**: Required for object serialization
 
 ### Optional Dependencies
 
@@ -167,7 +174,9 @@ data = {"project": "dsr-orchestrator", "steps": ["ingest", "analyze"]}
 # Save to YAML
 save_yaml(data, Path("config.yaml"))
 
-# Load from YAML
+# Load from YAML using the new UniqueKeyLoader
+# This will raise a ConstructorError if duplicate keys are detected,
+# protecting your project settings from conflicting edits.
 data = load_yaml(Path("config.yaml"))
 ```
 
