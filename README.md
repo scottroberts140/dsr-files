@@ -7,17 +7,18 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 2.2.0**: Added UniqueKeyLoader to YAML operations to ensure configuration integrity by preventing duplicate keys in project files.
+**Version 2.3.0**: Introduced logical extension validation to `FileType` and expanded support for modern data formats including .`jsonl`, `.pq`, and various Excel extensions.
 
 ## Features
 
-- **CSV**: Read and write CSV files with pandas
-- **JSON**: Save and load JSON data with recursive sanitization for NumPy/Pandas types
-- **JOBLIB**: Serialize Python objects and ML models with joblib
-- **Excel**: Save and load Excel workbooks (single or multi-sheet)
-- **PDF**: Generate interactive, indexed audit reports with Matplotlib and ReportLab
-- **PARQUET**: High-performance columnar storage using PyArrow or FastParquet
+- **CSV**: Read and write CSV files with pandas.
+- **JSON**: Save and load JSON data with recursive sanitization; now supports `.jsonl` (JSON Lines) for large datasets.
+- **JOBLIB**: Serialize Python objects and ML models with joblib.
+- **Excel**: Save and load Excel workbooks; supports .xlsx, .xls, .xlsm, and .xlsb formats.
+- **PDF**: Generate interactive, indexed audit reports with Matplotlib and ReportLab.
+- **PARQUET**: High-performance columnar storage; now supports .pq as a valid logical extension.
 - **YAML**: Save and load YAML files with recursive logic and **strict key validation** to prevent duplicate entries in configuration files.
+- **FileType Utilities**: The FileType enum now includes `is_valid_extension()` for performing logical consistency checks between file names and formats without requiring filesystem access. This is ideal for pre-validating configuration files in ML pipelines.
 
 ## Installation
 
