@@ -6,7 +6,7 @@ from typing import Any, Union
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
 from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, get_full_path
+from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
 
 
@@ -73,8 +73,14 @@ def save_csv(
     df = create_csv(data)
 
     if safe_call:
+        valid_params = _get_valid_params(FileType.CSV, "save")
         _, rejected = d_safe_call(
-            df.to_csv, kwargs, path_or_buf=full_path, index=index, encoding=encoding
+            df.to_csv,
+            kwargs,
+            path_or_buf=full_path,
+            index=index,
+            encoding=encoding,
+            valid_params=valid_params,
         )
         return full_path, rejected
     else:
@@ -126,8 +132,13 @@ def load_csv(
         raise FileNotFoundError(f"File not found: {path_obj}")
 
     if safe_call:
+        valid_params = _get_valid_params(FileType.CSV, "load")
         df, rejected = d_safe_call(
-            pd.read_csv, kwargs, filepath_or_buffer=path_obj, encoding=encoding
+            pd.read_csv,
+            kwargs,
+            filepath_or_buffer=path_obj,
+            encoding=encoding,
+            valid_params=valid_params,
         )
         return df, rejected
     else:

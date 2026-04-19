@@ -6,7 +6,7 @@ from typing import Any, Literal, Union, cast
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
 from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, get_full_path
+from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 
 # Define supported engines for Parquet operations
 ParquetEngine = Literal["pyarrow", "fastparquet", "auto"]
@@ -68,14 +68,8 @@ def save_parquet(
         # This prevents an invalid parameter from reaching the engine
         # The parquet internal functions have a **kwargs parameter that causes any
         # parameter to be passed when using dsr_utils.safe_call
-        valid_params = {
-            "partition_cols",
-            "storage_options",
-            "custom_metadata",
-            "row_group_size",
-            "coerce_timestamps",
-            "allow_truncated_timestamps",
-        }
+        _valid_params = _get_valid_params(FileType.PARQUET, "save")
+        valid_params = set(_valid_params) if _valid_params else {}
 
         accepted = {k: v for k, v in kwargs.items() if k in valid_params}
         rejected = {k: v for k, v in kwargs.items() if k not in valid_params}
@@ -152,16 +146,8 @@ def load_parquet(
         # This prevents an invalid parameter from reaching the engine
         # The parquet internal functions have a **kwargs parameter that causes any
         # parameter to be passed when using dsr_utils.safe_call
-        valid_params = {
-            "path",
-            "engine",
-            "columns",
-            "storage_options",
-            "use_nullable_dtypes",
-            "dtype_backend",
-            "filesystem",
-            "filters",
-        }
+        _valid_params = _get_valid_params(FileType.PARQUET, "load")
+        valid_params = set(_valid_params) if _valid_params else {}
 
         accepted = {k: v for k, v in kwargs.items() if k in valid_params}
         rejected = {k: v for k, v in kwargs.items() if k not in valid_params}

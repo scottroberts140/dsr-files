@@ -1,10 +1,12 @@
 """General utility functions for file operations."""
 
+import functools
 import warnings
 from pathlib import Path
-from typing import NamedTuple
+from typing import Literal, NamedTuple
 
 from cloudpathlib import AnyPath, CloudPath
+from dsr_files.enums import FileType
 
 
 def validate_extension(filepath: str | Path, expected_extensions: str | list[str]) -> None:
@@ -100,3 +102,54 @@ def get_full_path(output_dir: AnyPath | str, filename: str, mkdir: MkDir) -> Clo
         output_path.mkdir(parents=mkdir.parents, exist_ok=mkdir.exist_ok)
 
     return output_path / filename
+
+
+@functools.lru_cache(maxsize=1)
+def _get_valid_param_sets() -> dict:
+    """
+    Load and cache the master parameter registry from the package resources.
+
+    This function utilizes the `UniqueKeyLoader` to ensure the integrity of the
+    `params.yaml` file by preventing duplicate key definitions.
+    It uses a local import of `load_yaml` to resolve circular dependencies between
+    the utility and YAML handler modules.
+
+    Returns:
+        dict: The master dictionary of valid parameters for all supported file types.
+    """
+    from dsr_files.yaml_handler import load_yaml
+
+    path = Path(__file__).parent / "resources/params.yaml"
+    return load_yaml(str(path))[0]  # Accessing the data part of the (result, rejected) tuple
+
+
+@functools.lru_cache(maxsize=8)
+def _get_valid_params(file_type: FileType, op: Literal["save", "load"]):
+    """
+    Retrieve the set of valid parameters for a specific FileType and operation.
+
+    The function maps the `FileType` to the corresponding key in the cached YAML registry
+    by stripping the leading dot from the preferred extension (e.g., ".csv" becomes "csv").
+    If the requested operation or file type is not explicitly configured in the registry,
+    it returns None to allow the `safe_call` utility to fall back to standard reflection.
+
+    Args:
+        file_type (FileType): The format of the file being processed.
+        op (Literal["save", "load"]): The file operation to perform.
+
+    Returns:
+        set[str] | None: A set of valid parameter names for the engine, or None if not configured.
+
+    Raises:
+        ValueError: If the `file_type` is not one of the supported formats
+                    (CSV, PARQUET, JSON, JOBLIB) that require manual registry filtering.
+    """
+    supported = {FileType.CSV, FileType.PARQUET, FileType.JSON, FileType.JOBLIB}
+
+    if file_type not in supported:
+        raise ValueError(f"FileType {file_type.name} does not support valid_params")
+
+    registry = _get_valid_param_sets()
+    key = file_type.preferred_extension().lstrip(".")
+    param_list = registry.get(key, {}).get(op)
+    return set(param_list) if param_list else None

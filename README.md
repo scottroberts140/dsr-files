@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 3.0.0**: Introduced **Cloud-Native Pathing** via `cloudpathlib`, standardized **Universal Parameter Filtering** to prevent engine-level crashes, and updated all signatures to support audit-ready return values.
+**Version 3.1.0**: Introduced **Configuration-Driven Parameter Filtering** using a centralized YAML registry. Optimized internal utility performance with **LRU caching** and enhanced **Circular Dependency Resolution** for more robust library architecture.
 
 ## Features
 
@@ -61,6 +61,10 @@ pip install cloudpathlib[all]
 pip install -e ".[dev,excel,pdf]"
 ```
 
+## Developer Transparency
+
+**Note on Parameter Registry**: The list of valid parameters for each format can be found in `dsr_files/resources/params.yaml`. This file serves as the "ground truth" for all `safe_call` filtering operations.
+
 ## Usage
 
 ## Universal Parameter Filtering
@@ -68,6 +72,8 @@ pip install -e ".[dev,excel,pdf]"
 All handlers now support `safe_call=True`. This leverages `dsr-utils` to filter out incompatible keyword arguments that would otherwise cause `TypeErrors` in underlying engines like `pyarrow` or `fastparquet`.
 
 Any parameters that are not compatible with the specific engine are returned in a `rejected` dictionary for debugging and audit logging.
+
+The library no longer relies solely on reflection, but uses a "ground truth" registry for engine-specific safety.
 
 ### CSV Operations
 
@@ -82,6 +88,9 @@ df = create_csv(data)
 
 # Save to CSV
 full_path, rejected = save_csv(df, Path("."), "data")
+
+# Using safe_call
+full_path, rejected = save_csv(df, Path("."), "data", safe_call=True, float_format="%.2f")
 
 # Load from CSV
 df, rejected = load_csv(Path("data.csv"))

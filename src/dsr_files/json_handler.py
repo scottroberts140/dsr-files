@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
 from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, get_full_path
+from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
 
 
@@ -80,7 +80,8 @@ def save_json(
         if safe_call:
             from json import JSONEncoder
 
-            _, rejected = d_safe_call(JSONEncoder, kwargs)
+            valid_params = _get_valid_params(FileType.JSON, "save")
+            _, rejected = d_safe_call(JSONEncoder, kwargs, valid_params=valid_params)
 
             clean_kwargs = {k: v for k, v in kwargs.items() if k not in rejected}
             json.dump(obj=safe_data, fp=f, indent=indent, **clean_kwargs)
@@ -136,7 +137,8 @@ def load_json(
         if safe_call:
             from json import JSONDecoder
 
-            _, rejected = d_safe_call(JSONDecoder, kwargs)
+            valid_params = _get_valid_params(FileType.JSON, "load")
+            _, rejected = d_safe_call(JSONDecoder, kwargs, valid_params=valid_params)
 
             clean_kwargs = {k: v for k, v in kwargs.items() if k not in rejected}
             return json.load(f, **clean_kwargs), rejected

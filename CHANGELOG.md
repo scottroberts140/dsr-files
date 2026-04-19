@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.0] - 2026-04-19
+
+### Added
+
+- **Configuration-Driven Parameter Filtering**: Introduced a centralized `params.yaml` registry to define valid arguments for various file engines, ensuring strict validation through the `UniqueKeyLoader`.
+- **High-Performance Registry Caching**: Implemented `lru_cache` for internal parameter retrieval to eliminate redundant disk I/O and set-conversion overhead during high-frequency I/O operations.
+- **Defensive Parameter Validation**: Added a private `_get_valid_params` helper with "fail-fast" `ValueError` reporting to catch unsupported `FileType` configurations during development.
+
+### Changed
+
+- **Optimized `safe_call` Integration**: Refined all file handlers to automatically utilize YAML-defined `valid_params` when `safe_call=True` is enabled, resolving `**kwargs` passthrough issues in engines like Parquet and JSON.
+
 ## [3.0.0] - 2026-04-19
 
 ### BREAKING CHANGES

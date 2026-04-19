@@ -2,9 +2,12 @@
 
 from pathlib import Path
 
+import pandas as pd
 import pytest
 from cloudpathlib import CloudPath
-from dsr_files.utils import MkDir, get_full_path, validate_extension
+from dsr_files.csv_handler import MkDir, _get_valid_params, get_full_path, save_csv
+from dsr_files.enums import FileType
+from dsr_files.utils import _get_valid_param_sets, validate_extension
 
 
 def test_validate_extension_success():
@@ -59,3 +62,47 @@ def test_get_full_path_no_mkdir(tmp_path):
     get_full_path(target_dir, "file.txt", MkDir(mkdir=False))
 
     assert not target_dir.exists()
+
+
+def test_valid_param_registry_integrity():
+    """Verify that the master YAML is loaded correctly and cached."""
+    registry = _get_valid_param_sets()
+    assert "csv" in registry
+    assert "parquet" in registry
+    # Verify the nested structure matches your notes
+    assert "save" in registry["csv"]
+
+
+def test_get_valid_params_caching():
+    """Verify that the helper returns the correct set and honors the cache."""
+    csv_save = _get_valid_params(FileType.CSV, "save")
+    assert isinstance(csv_save, set)
+    assert "sep" in csv_save
+
+    # Second call should be near-instant via lru_cache
+    assert _get_valid_params(FileType.CSV, "save") is csv_save
+
+
+def test_get_valid_params_unsupported_type():
+    """Verify that unsupported FileTypes raise a ValueError."""
+    # Assuming PDF is not in your 'supported' set
+    with pytest.raises(ValueError, match="does not support valid_params"):
+        _get_valid_params(FileType.PDF, "save")
+
+
+def test_csv_safe_call_with_yaml_filtering(tmp_path):
+    """Verify end-to-end filtering using the YAML-defined valid_params."""
+    df = pd.DataFrame({"a": [1]})
+
+    # 'invalid_arg' is not in the CSV save list in params.yaml
+    # 'sep' is in the list, but will be overridden by the handler's fixed logic
+    _, rejected = save_csv(
+        df,
+        tmp_path,
+        "test",
+        safe_call=True,
+        invalid_arg="ignore_me",
+        float_format="%.2f",
+    )
+
+    assert "invalid_arg" in rejected

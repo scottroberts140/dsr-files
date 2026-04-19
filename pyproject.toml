@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsr-files"
-version = "3.0.0"
+version = "3.1.0"
 description = "File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -49,6 +49,9 @@ excel = ["openpyxl>=3.1.4", "xlsxwriter>=3.2.0"]
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+dsr_files = ["resources/params.yaml"]
 
 [tool.black]
 line-length = 100

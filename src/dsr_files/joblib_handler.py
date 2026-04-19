@@ -6,7 +6,7 @@ from typing import Any, Union, cast
 import joblib
 from cloudpathlib import AnyPath, CloudPath
 from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, get_full_path
+from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
 
 
@@ -51,8 +51,14 @@ def save_joblib(
 
     # Cast compress to Any specifically for the call to satisfy the restrictive stub
     if safe_call:
+        valid_params = _get_valid_params(FileType.JOBLIB, "save")
         _, rejected = d_safe_call(
-            joblib.dump, kwargs, value=data, filename=full_path, compress=cast(Any, compress)
+            joblib.dump,
+            kwargs,
+            value=data,
+            filename=full_path,
+            compress=cast(Any, compress),
+            valid_params=valid_params,
         )
         return full_path, rejected
     else:
@@ -101,7 +107,8 @@ def load_joblib(
         raise FileNotFoundError(f"File not found: {path_obj}")
 
     if safe_call:
-        j, rejected = d_safe_call(joblib.load, kwargs, filename=path_obj)
+        valid_params = _get_valid_params(FileType.JOBLIB, "load")
+        j, rejected = d_safe_call(joblib.load, kwargs, filename=path_obj, valid_params=valid_params)
         return j, rejected
     else:
         j = joblib.load(path_obj, **kwargs)
