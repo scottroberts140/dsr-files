@@ -5,11 +5,14 @@ import json
 from datetime import date, datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any
+from typing import Any, Union
 
 import numpy as np
 import pandas as pd
-from dsr_files.utils import validate_extension
+from cloudpathlib import AnyPath, CloudPath
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, get_full_path
+from dsr_utils.reflection import safe_call as d_safe_call
 
 
 def create_json(data: dict[str, Any]) -> dict[str, Any]:
@@ -31,12 +34,13 @@ def create_json(data: dict[str, Any]) -> dict[str, Any]:
 
 def save_json(
     data: dict[str, Any],
-    output_dir: Path,
+    output_dir: AnyPath | str,
     filename: str,
     indent: int | None = 2,
     encoding: str = "utf-8",
+    safe_call: bool = False,
     **kwargs: Any,
-) -> Path:
+) -> tuple[Union[Path, CloudPath], dict[str, Any]]:
     """
     Save a dictionary to a JSON file with safe type conversion.
 
@@ -44,7 +48,7 @@ def save_json(
     ----------
     data : dict[str, Any]
         The dictionary to save.
-    output_dir : Path
+    output_dir : AnyPath | str
         The destination directory.
     filename : str
         The base name of the file (extension '.json' is appended automatically).
@@ -52,47 +56,69 @@ def save_json(
         The indentation level for the JSON output.
     encoding : str, default "utf-8"
         The character encoding for the resulting file.
+    safe_call : bool, default False
+        If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
+        from `**kwargs` before calling `json.dump()`.
     **kwargs : Any
-        Additional keyword arguments passed directly to `json.dump()`.
+        Additional keyword arguments passed directly to `json.dump()`. If `safe_call`
+        is True, these are automatically filtered based on the `json.dump` signature.
 
     Returns
     -------
-    Path
+    full_path : Path, CloudPath
         The full path to the saved JSON file.
+    rejected_params : dict[str, Any]
+        A dictionary of parameters from `**kwargs` that were incompatible with the
+        save method. Returns an empty dictionary if `safe_call` is False.
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    full_path = output_dir / f"{filename}.json"
+    full_path = get_full_path(output_dir, FileType.JSON.format_filename(filename), MkDir())
 
     # Ensure all data is JSON-serializable
     safe_data = to_JSON_safe(data)
 
     with open(full_path, "w", encoding=encoding) as f:
-        json.dump(safe_data, f, indent=indent, **kwargs)
+        if safe_call:
+            from json import JSONEncoder
 
-    return full_path
+            _, rejected = d_safe_call(JSONEncoder, kwargs)
+
+            clean_kwargs = {k: v for k, v in kwargs.items() if k not in rejected}
+            json.dump(obj=safe_data, fp=f, indent=indent, **clean_kwargs)
+            return full_path, rejected
+        else:
+            json.dump(safe_data, f, indent=indent, **kwargs)
+            return full_path, {}
 
 
 def load_json(
-    filepath: str | Path,
+    filepath: str | AnyPath,
     encoding: str = "utf-8",
+    safe_call: bool = False,
     **kwargs: Any,
-) -> dict[str, Any]:
+) -> tuple[dict[str, Any], dict[str, Any]]:
     """
     Load data from a JSON file.
 
     Parameters
     ----------
-    filepath : str | Path
+    filepath : str | AnyPath
         Path to the target JSON file.
     encoding : str, default "utf-8"
         The character encoding used to read the file.
+    safe_call : bool, default False
+        If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
+        from `**kwargs` before calling `json.load()`.
     **kwargs : Any
-        Additional keyword arguments passed directly to `json.load()`.
+        Additional keyword arguments passed directly to `json.load()`. If `safe_call`
+        is True, these are automatically filtered based on the `json.load` signature.
 
     Returns
     -------
-    dict[str, Any]
+    data : dict[str, Any]
         The dictionary loaded from the JSON file.
+    rejected_params : dict[str, Any]
+        A dictionary of parameters from `**kwargs` that were incompatible with the
+        load method. Returns an empty dictionary if `safe_call` is False.
 
     Raises
     ------
@@ -101,13 +127,22 @@ def load_json(
     ValueError
         If the file extension is not '.json'.
     """
-    validate_extension(filepath, ".json")
-    path_obj = Path(filepath)
+    FileType.JSON.validate_extension(filepath)
+    path_obj = AnyPath(filepath)
     if not path_obj.exists():
-        raise FileNotFoundError(f"File not found: {filepath}")
+        raise FileNotFoundError(f"File not found: {path_obj}")
 
     with open(path_obj, "r", encoding=encoding) as f:
-        return json.load(f, **kwargs)
+        if safe_call:
+            from json import JSONDecoder
+
+            _, rejected = d_safe_call(JSONDecoder, kwargs)
+
+            clean_kwargs = {k: v for k, v in kwargs.items() if k not in rejected}
+            return json.load(f, **clean_kwargs), rejected
+        else:
+            d = json.load(f, **kwargs)
+            return d, {}
 
 
 def to_JSON_safe(o: Any) -> Any:

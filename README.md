@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 2.3.0**: Introduced logical extension validation to `FileType` and expanded support for modern data formats including .`jsonl`, `.pq`, and various Excel extensions.
+**Version 3.0.0**: Introduced **Cloud-Native Pathing** via `cloudpathlib`, standardized **Universal Parameter Filtering** to prevent engine-level crashes, and updated all signatures to support audit-ready return values.
 
 ## Features
 
@@ -32,6 +32,8 @@ pip install dsr-files
 - **PyYAML**: >= 6.0.2
 - **Pandas**: Required for CSV and Excel operations
 - **Joblib**: Required for object serialization
+- **dsr-utils**: >= 1.6.0
+- **cloudpathlib**: Required for `AnyPath` and `CloudPath` support
 
 ### Optional Dependencies
 
@@ -47,6 +49,12 @@ For PDF support:
 pip install dsr-files[pdf]
 ```
 
+For full cloud support (S3, GCS, Azure)
+
+```bash
+pip install cloudpathlib[all]
+```
+
 ## Development Installation
 
 ```bash
@@ -54,6 +62,12 @@ pip install -e ".[dev,excel,pdf]"
 ```
 
 ## Usage
+
+## Universal Parameter Filtering
+
+All handlers now support `safe_call=True`. This leverages `dsr-utils` to filter out incompatible keyword arguments that would otherwise cause `TypeErrors` in underlying engines like `pyarrow` or `fastparquet`.
+
+Any parameters that are not compatible with the specific engine are returned in a `rejected` dictionary for debugging and audit logging.
 
 ### CSV Operations
 
@@ -67,10 +81,10 @@ data = {"name": ["Alice", "Bob"], "age": [30, 25]}
 df = create_csv(data)
 
 # Save to CSV
-save_csv(df, Path("."), "data")
+full_path, rejected = save_csv(df, Path("."), "data")
 
 # Load from CSV
-df = load_csv(Path("data.csv"))
+df, rejected = load_csv(Path("data.csv"))
 ```
 
 ### JSON Operations
@@ -82,10 +96,10 @@ from pathlib import Path
 data = {"key": "value", "number": 42}
 
 # Save to JSON
-save_json(data, Path("."), "data")
+full_path, rejected = save_json(data, Path("."), "data")
 
 # Load from JSON
-data = load_json(Path("data.json"))
+data, rejected = load_json(Path("data.json"))
 ```
 
 ### JOBLIB Operations
@@ -96,10 +110,10 @@ from pathlib import Path
 
 # Save any Python object
 model = {"weights": [1, 2, 3], "config": {}}
-save_joblib(model, Path("."), "model")
+full_path, rejected = save_joblib(model, Path("."), "model")
 
 # Load from JOBLIB
-model = load_joblib(Path("model.joblib"))
+model, rejected = load_joblib(Path("model.joblib"))
 ```
 
 ### Excel Operations
@@ -113,7 +127,7 @@ sales = pd.DataFrame({"region": ["NA", "EU"], "revenue": [120, 95]})
 costs = pd.DataFrame({"region": ["NA", "EU"], "cost": [80, 70]})
 
 # Save multi-sheet workbook
-save_excel(
+full_path, rejected = save_excel(
  [
   ExcelSheetConfig(data=sales, sheet_name="Sales"),
   ExcelSheetConfig(data=costs, sheet_name="Costs"),
@@ -123,7 +137,7 @@ save_excel(
 )
 
 # Load first sheet
-df = load_excel(Path("report.xlsx"))
+df, rejected = load_excel(Path("report.xlsx"))
 ```
 
 ### PDF Operations (Interactive Reports)
@@ -145,7 +159,7 @@ page = doc.create_new_page("Summary")
 # ... Add Matplotlib content to page.fig ...
 
 doc.render_table_of_contents()
-doc.save(Path("."), "audit_report")
+full_path, rejected = doc.save(Path("."), "audit_report")
 ```
 
 ### PARQUET Operations
@@ -158,10 +172,10 @@ from pathlib import Path
 df = pd.DataFrame({"A": [1, 2, 3], "B": ["x", "y", "z"]})
 
 # Save to Parquet
-save_parquet(df, Path("."), "data", engine="pyarrow")
+full_path, rejected = save_parquet(df, Path("."), "data", engine="pyarrow")
 
 # Load from Parquet
-df = load_parquet(Path("data.parquet"))
+df, rejected = load_parquet(Path("data.parquet"))
 ```
 
 ### YAML Operations
@@ -173,12 +187,26 @@ from pathlib import Path
 data = {"project": "dsr-orchestrator", "steps": ["ingest", "analyze"]}
 
 # Save to YAML
-save_yaml(data, Path("config.yaml"))
+full_path, rejected = save_yaml(data, Path("config.yaml"))
 
 # Load from YAML using the new UniqueKeyLoader
 # This will raise a ConstructorError if duplicate keys are detected,
 # protecting your project settings from conflicting edits.
-data = load_yaml(Path("config.yaml"))
+data, rejected = load_yaml(Path("config.yaml"))
+```
+
+## Cloud-Native Pathing
+
+`dsr-files` now supports both local and cloud filesystems (S3, GCS, Azure) out of the box using `cloudpathlib`. You can pass raw URI strings, `pathlib.Path` objects, or `CloudPath` objects directly to any handler.
+
+```python
+from dsr_files import save_csv
+
+# Local path
+full_path, rejected = save_csv(df, "./data", "local_audit") 
+
+# Cloud path (requires cloudpathlib[s3])
+full_path, rejected = save_csv(df, "s3://my-bucket/audits", "remote_audit")
 ```
 
 ## Testing

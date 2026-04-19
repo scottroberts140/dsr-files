@@ -10,7 +10,7 @@ from dsr_files.excel_handler import ExcelSheetConfig, create_excel, load_excel, 
 from dsr_files.joblib_handler import load_joblib, save_joblib
 from dsr_files.json_handler import create_json, load_json, save_json, to_JSON_safe
 from dsr_files.parquet_handler import load_parquet, save_parquet
-from dsr_files.utils import validate_extension
+from dsr_files.utils import MkDir, get_full_path, validate_extension
 from dsr_files.yaml_handler import load_yaml, save_yaml
 
 try:
@@ -63,6 +63,8 @@ __all__ = [
     "PageColors",
     "PageConfiguration",
     "PDFDocument",
+    "MkDir",
+    "get_full_path",
 ]
 
-__version__ = "2.3.0"
+__version__ = "3.0.0"

@@ -48,8 +48,9 @@ def test_save_and_load_csv(sample_df: pd.DataFrame) -> None:
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         dir_path = Path(tmpdir)
-        csv_handler.save_csv(sample_df, dir_path, "test")
-        loaded_df = csv_handler.load_csv(dir_path / "test.csv")
+        csv_handler.save_csv(sample_df, str(dir_path), "test")
+        full_path = dir_path / "test.csv"
+        loaded_df, _ = csv_handler.load_csv(str(full_path))
 
         pd.testing.assert_frame_equal(loaded_df, sample_df)
 
@@ -60,8 +61,9 @@ def test_save_csv_from_dict(sample_data: dict[str, list[int]]) -> None:
     """
     with tempfile.TemporaryDirectory() as tmpdir:
         dir_path = Path(tmpdir)
-        csv_handler.save_csv(sample_data, dir_path, "test")
-        loaded_df = csv_handler.load_csv(dir_path / "test.csv")
+        csv_handler.save_csv(sample_data, str(dir_path), "test")
+        full_path = dir_path / "test.csv"
+        loaded_df, _ = csv_handler.load_csv(str(full_path))
 
         assert len(loaded_df) == 3
 
@@ -71,7 +73,7 @@ def test_load_csv_invalid_extension() -> None:
     Verify that loading a non-CSV file raises a ValueError.
     """
     with pytest.raises(ValueError):
-        csv_handler.load_csv("data.txt")
+        csv_handler.load_csv("data.pdf")
 
 
 def test_load_csv_not_found() -> None:
@@ -80,3 +82,23 @@ def test_load_csv_not_found() -> None:
     """
     with pytest.raises(FileNotFoundError):
         csv_handler.load_csv("non_existent_file.csv")
+
+
+def test_save_csv_returns_tuple(sample_data, tmp_path):
+    """Verify the new v3.0.0 return signature for savers."""
+    # Ensure path and dict are returned
+    path, rejected = csv_handler.save_csv(sample_data, tmp_path, "test_file")
+    assert isinstance(path, Path)
+    assert isinstance(rejected, dict)
+    assert path.suffix == ".csv"
+
+
+def test_load_csv_with_safe_call(sample_data, tmp_path):
+    """Verify reflection-based filtering and return types."""
+    file_path = tmp_path / "test.csv"
+    pd.DataFrame({"x": [1]}).to_csv(file_path, index=False)
+
+    # Pass an invalid parameter to verify it is caught in 'rejected'
+    df, rejected = csv_handler.load_csv(file_path, safe_call=True, fake_param="value")
+    assert "fake_param" in rejected
+    assert isinstance(df, pd.DataFrame)

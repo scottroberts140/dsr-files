@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2026-04-19
+
+### BREAKING CHANGES
+
+- **Signature Update**: `load_...` and `save_...` functions now return a tuple of `(result, rejected_params)` to accommodate calls when `safe_call=True` is enabled.
+- **Dependency Requirement**: This version now requires `dsr-utils >= 1.6.0` to support the underlying reflection logic.
+
+### Added
+
+- **Cloud-Native Path Support**: Integrated `cloudpathlib` to provide polymorphic support for local and cloud filesystems (S3, GCS, Azure) via `AnyPath`.
+- **Centralized Path Utilities**: Introduced `get_full_path` and the `MkDir` configuration object to standardize protocol-safe path joining and directory creation across all handlers.
+- **Universal Parameter Filtering**: Integrated `dsr_utils.safe_call` into all I/O functions, leveraging `valid_params` for strict filtering on complex engines (JSON, Parquet).
+- **Load/Save Logic Robustness**: Added `safe_call` support to all `load...` and `save_...` functions, ensuring that exporting data is as resilient to configuration drift as importing it.
+
 ## [2.3.0] - 2026-04-17
 
 ### Added

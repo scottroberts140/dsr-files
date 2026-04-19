@@ -19,11 +19,11 @@ def test_save_and_load_joblib(complex_data):
         dir_path = Path(tmpdir)
         filename = "test_model"
 
-        saved_path = joblib_handler.save_joblib(complex_data, dir_path, filename)
+        saved_path, _ = joblib_handler.save_joblib(complex_data, str(dir_path), filename)
         assert saved_path.exists()
         assert saved_path.suffix == ".joblib"
 
-        loaded_data = joblib_handler.load_joblib(saved_path)
+        loaded_data, _ = joblib_handler.load_joblib(str(saved_path))
         assert loaded_data == complex_data
 
 
@@ -37,3 +37,25 @@ def test_load_joblib_not_found():
     """Verify FileNotFoundError for missing files."""
     with pytest.raises(FileNotFoundError):
         joblib_handler.load_joblib("missing_model.joblib")
+
+
+def test_save_joblib_returns_tuple(complex_data, tmp_path):
+    """Verify the new v3.0.0 return signature for savers."""
+    # Ensure path and dict are returned
+    path, rejected = joblib_handler.save_joblib(complex_data, tmp_path, "test_file")
+    assert isinstance(path, Path)
+    assert isinstance(rejected, dict)
+    assert path.suffix == ".joblib"
+
+
+def test_load_joblib_with_safe_call(complex_data, tmp_path):
+    """Verify reflection-based filtering and return types."""
+    file_name = "test.joblib"
+    file_path, _ = joblib_handler.save_joblib(complex_data, tmp_path, file_name)
+
+    # Pass an invalid parameter to verify it is caught in 'rejected'
+    loaded_data, rejected = joblib_handler.load_joblib(
+        str(file_path), safe_call=True, fake_param="value"
+    )
+    assert "fake_param" in rejected
+    assert loaded_data == complex_data

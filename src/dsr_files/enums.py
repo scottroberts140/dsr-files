@@ -7,6 +7,8 @@ dsr-files library for reading, writing, and auditing.
 
 from enum import Flag, auto
 
+from cloudpathlib import AnyPath
+
 
 class FileType(Flag):
     """
@@ -30,6 +32,8 @@ class FileType(Flag):
         Microsoft Excel spreadsheet format (.xlsx).
     PARQUET : auto
         Apache Parquet columnar storage format (highly optimized for large datasets).
+    YAML : auto
+        YAML format.
     """
 
     CSV = auto()
@@ -38,6 +42,26 @@ class FileType(Flag):
     PDF = auto()
     EXCEL = auto()
     PARQUET = auto()
+    YAML = auto()
+
+    def get_extensions(self) -> list[str]:
+        match self:
+            case FileType.CSV:
+                return ["csv", "txt"]
+            case FileType.JSON:
+                return ["json", "jsonl"]
+            case FileType.JOBLIB:
+                return ["joblib", "joblib.gz"]
+            case FileType.PDF:
+                return ["pdf"]
+            case FileType.EXCEL:
+                return ["xlsx", "xls", "xlsm", "xlsb"]
+            case FileType.PARQUET:
+                return ["parquet", "pq"]
+            case FileType.YAML:
+                return ["yaml", "yml"]
+            case _:
+                return []
 
     def _check_single_type(self, ext_lower: str) -> bool:
         """
@@ -59,21 +83,7 @@ class FileType(Flag):
             True if the extension is a logical match for the current
             FileType member, False otherwise.
         """
-        match self:
-            case FileType.CSV:
-                return ext_lower in ["csv", "txt"]
-            case FileType.JSON:
-                return ext_lower in ["json", "jsonl"]
-            case FileType.JOBLIB:
-                return ext_lower in ["joblib", "joblib.gz"]
-            case FileType.PDF:
-                return ext_lower in ["pdf"]
-            case FileType.EXCEL:
-                return ext_lower in ["xlsx", "xls", "xlsm", "xlsb"]
-            case FileType.PARQUET:
-                return ext_lower in ["parquet", "pq"]
-            case _:
-                return False
+        return ext_lower in self.get_extensions()
 
     def is_valid_extension(self, ext: str) -> bool:
         """
@@ -107,3 +117,70 @@ class FileType(Flag):
             for member in FileType
             if member in self and member != FileType(0)
         )
+
+    def validate_extension(self, filepath: str | AnyPath) -> None:
+        """
+        Validate that a file's extension is compatible with the FileType.
+
+        Parameters
+        ----------
+        filepath : str | Path
+            The path to the file to validate.
+
+        Raises
+        ------
+        ValueError
+            If the file's extension does not match the current FileType flag.
+        """
+        if not self.is_valid_extension(AnyPath(filepath).suffix):
+            raise ValueError(
+                f"Invalid file extension for {self.name}. "
+                f"Valid extensions are {self.get_extensions()}. "
+                f"Path: {filepath}"
+            )
+
+    def preferred_extension(self) -> str:
+        """
+        Return the standard file extension for the current FileType.
+
+        Returns
+        -------
+        str
+            The lowercase extension including the leading dot (e.g., '.csv').
+        """
+        match self:
+            case FileType.CSV:
+                return ".csv"
+            case FileType.JSON:
+                return ".json"
+            case FileType.JOBLIB:
+                return ".joblib"
+            case FileType.PDF:
+                return ".pdf"
+            case FileType.EXCEL:
+                return ".xlsx"
+            case FileType.PARQUET:
+                return ".parquet"
+            case FileType.YAML:
+                return ".yaml"
+            case _:
+                return ""
+
+    def format_filename(self, filename: str) -> str:
+        """
+        Ensure the filename has the preferred extension for this FileType.
+
+        Parameters
+        ----------
+        filename : str
+            The base filename or partial path.
+
+        Returns
+        -------
+        str
+            The filename with the preferred extension appended if missing.
+        """
+        ext = self.preferred_extension()
+        if not filename.lower().endswith(ext):
+            return f"{filename}{ext}"
+        return filename

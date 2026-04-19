@@ -1,19 +1,23 @@
 """JOBLIB file handling operations."""
 
 from pathlib import Path
-from typing import Any, cast
+from typing import Any, Union, cast
 
 import joblib
-from dsr_files.utils import validate_extension
+from cloudpathlib import AnyPath, CloudPath
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, get_full_path
+from dsr_utils.reflection import safe_call as d_safe_call
 
 
 def save_joblib(
     data: Any,
-    output_dir: Path,
+    output_dir: AnyPath | str,
     filename: str,
     compress: int | tuple[str, int] = 3,
+    safe_call: bool = False,
     **kwargs: Any,
-) -> Path:
+) -> tuple[Union[Path, CloudPath], dict[str, Any]]:
     """
     Save a Python object to a JOBLIB file using joblib serialization.
 
@@ -21,48 +25,67 @@ def save_joblib(
     ----------
     data : Any
         The Python object to persist (e.g., a trained model or a large array).
-    output_dir : Path
+    output_dir : AnyPath | str
         The destination directory.
     filename : str
         The base name of the file (extension '.joblib' is appended automatically).
     compress : int | tuple[str, int], default 3
         The compression level from 0 to 9, or a tuple specifying the
         compression method and level.
+    safe_call : bool, default False
+        If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
+        from `**kwargs` before calling `joblib.dump()`.
     **kwargs : Any
-        Additional keyword arguments passed directly to `joblib.dump()`.
+        Additional keyword arguments passed directly to `joblib.dump()`. If `safe_call`
+        is True, these are automatically filtered based on the `joblib.dump` signature.
 
     Returns
     -------
-    Path
+    full_path : Path, CloudPath
         The full path to the saved JOBLIB file.
+    rejected_params : dict[str, Any]
+        A dictionary of parameters from `**kwargs` that were incompatible with the
+        save method. Returns an empty dictionary if `safe_call` is False.
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    full_path = output_dir / f"{filename}.joblib"
+    full_path = get_full_path(output_dir, FileType.JOBLIB.format_filename(filename), MkDir())
 
     # Cast compress to Any specifically for the call to satisfy the restrictive stub
-    joblib.dump(data, full_path, compress=cast(Any, compress), **kwargs)
-
-    return full_path
+    if safe_call:
+        _, rejected = d_safe_call(
+            joblib.dump, kwargs, value=data, filename=full_path, compress=cast(Any, compress)
+        )
+        return full_path, rejected
+    else:
+        joblib.dump(data, full_path, compress=cast(Any, compress), **kwargs)
+        return full_path, {}
 
 
 def load_joblib(
-    filepath: str | Path,
+    filepath: str | AnyPath,
+    safe_call: bool = False,
     **kwargs: Any,
-) -> Any:
+) -> tuple[Any, dict[str, Any]]:
     """
     Load and deserialize data from a JOBLIB file.
 
     Parameters
     ----------
-    filepath : str | Path
+    filepath : str | AnyPath
         Path to the target JOBLIB file.
+    safe_call : bool, default False
+        If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
+        from `**kwargs` before calling `joblib.load()`.
     **kwargs : Any
-        Additional keyword arguments passed directly to `joblib.load()`.
+        Additional keyword arguments passed directly to `joblib.load()`. If `safe_call`
+        is True, these are automatically filtered based on the `joblib.load` signature.
 
     Returns
     -------
-    Any
+    data : Any
         The deserialized Python object.
+    rejected_params : dict[str, Any]
+        A dictionary of parameters from `**kwargs` that were incompatible with the
+        load method. Returns an empty dictionary if `safe_call` is False.
 
     Raises
     ------
@@ -71,10 +94,15 @@ def load_joblib(
     ValueError
         If the file extension is not '.joblib'.
     """
-    validate_extension(filepath, ".joblib")
+    FileType.JOBLIB.validate_extension(filepath)
 
-    path_obj = Path(filepath)
+    path_obj = AnyPath(filepath)
     if not path_obj.exists():
         raise FileNotFoundError(f"File not found: {path_obj}")
 
-    return joblib.load(path_obj, **kwargs)
+    if safe_call:
+        j, rejected = d_safe_call(joblib.load, kwargs, filename=path_obj)
+        return j, rejected
+    else:
+        j = joblib.load(path_obj, **kwargs)
+        return j, {}

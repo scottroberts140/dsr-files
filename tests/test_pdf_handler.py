@@ -3,7 +3,6 @@
 import tempfile
 from pathlib import Path
 
-import matplotlib.pyplot as plt
 import pytest
 from matplotlib.figure import Figure
 
@@ -69,7 +68,7 @@ def test_pdf_document_full_save(page_config: PageConfiguration) -> None:
         doc.create_new_page("Page 2")
 
         doc.render_table_of_contents()
-        save_path = doc.save(output_dir, "interactive_audit")
+        save_path = doc.save(str(output_dir), "interactive_audit")
 
         assert save_path.exists()
         # Check that temp files were cleaned up
@@ -81,7 +80,7 @@ def test_save_pdf_text() -> None:
     content = ["Line 1", "Line 2"]
     with tempfile.TemporaryDirectory() as tmpdir:
         output_dir = Path(tmpdir)
-        filepath = pdf_handler.save_pdf(content, output_dir, "test_doc")
+        filepath, _ = pdf_handler.save_pdf(content, str(output_dir), "test_doc")
 
         assert filepath.exists()
         assert filepath.name == "test_doc.pdf"
@@ -95,3 +94,16 @@ def test_load_pdf_raises_not_implemented() -> None:
 
         with pytest.raises(NotImplementedError, match="requires additional dependencies"):
             pdf_handler.load_pdf(p)
+
+
+def test_save_pdf_returns_tuple(tmp_path):
+    """Verify the new v3.0.0 return signature for savers."""
+    # Ensure path and dict are returned
+    content = ["Line 1", "Line 2"]
+    with tempfile.TemporaryDirectory() as tmpdir:
+        output_dir = Path(tmpdir)
+        path, rejected = pdf_handler.save_pdf(content, str(output_dir), "test_doc")
+
+    assert isinstance(path, Path)
+    assert isinstance(rejected, dict)
+    assert path.suffix == ".pdf"

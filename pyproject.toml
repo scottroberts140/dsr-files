@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dsr-files"
-version = "2.3.0"
+version = "3.0.0"
 description = "File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET)"
 readme = "README.md"
 license = { text = "MIT" }
@@ -31,17 +31,19 @@ dependencies = [
     "matplotlib>=3.10.8",
     "pillow>=12.2.0",        # Latest image processing support
     "pyyaml>=6.0.2",
+    "dsr-utils>=1.6.0",
 ]
 
 [project.optional-dependencies]
 dev = [
     "pytest>=9.0.3",
     "pytest-cov>=7.1.0",
-    "black>=26.3.1",     # Latest formatter for 2026 standards
+    "black>=26.3.1",        # Latest formatter for 2026 standards
     "flake8>=7.0.0",
     "mypy>=1.10.0",
     "openpyxl>=3.1.4",
     "xlsxwriter>=3.2.0",
+    "cloudpathlib>=0.23.0",
 ]
 excel = ["openpyxl>=3.1.4", "xlsxwriter>=3.2.0"]
 

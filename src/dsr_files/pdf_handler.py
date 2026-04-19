@@ -11,6 +11,10 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
+from cloudpathlib import AnyPath, CloudPath
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, get_full_path
+from dsr_utils.reflection import safe_call as d_safe_call
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
 from matplotlib.layout_engine import ConstrainedLayoutEngine
@@ -783,7 +787,9 @@ class PDFDocument:
             c.showPage()
         c.save()
 
-    def save(self, output_dir: Path, filename: str, **kwargs: Any) -> Path:
+    def save(
+        self, output_dir: AnyPath | str, filename: str, **kwargs: Any
+    ) -> Union[Path, CloudPath]:
         """
         Compile and save the final interactive PDF document.
 
@@ -793,7 +799,7 @@ class PDFDocument:
 
         Parameters
         ----------
-        output_dir : Path
+        output_dir : AnyPath | str
             The destination directory for the final PDF.
         filename : str
             The base name of the file (extension '.pdf' is added).
@@ -803,14 +809,14 @@ class PDFDocument:
 
         Returns
         -------
-        Path
+        Path, CloudPath
             The full path to the successfully saved and merged PDF.
         """
         temp_dir = tempfile.gettempdir()
-        temp_main_pdf_filepath = Path(temp_dir) / f"temp_main_{filename}"
-        main_pdf_path = save_pdf(self.content, temp_main_pdf_filepath, filename, **kwargs)
+        temp_main_pdf_filepath = AnyPath(temp_dir) / f"temp_main_{filename}"
+        main_pdf_path, _ = save_pdf(self.content, str(temp_main_pdf_filepath), filename, **kwargs)
         writer = PdfWriter()
-        main_reader = PdfReader(main_pdf_path)
+        main_reader = PdfReader(str(main_pdf_path))
 
         if len(self.toc_pages) > 0:
             toc_reader = PdfReader(self.toc_temp_file_path)
@@ -853,34 +859,34 @@ class PDFDocument:
 
 
 def _get_pdf_fullpath(
-    output_dir: Path,
+    output_dir: AnyPath | str,
     filename: str,
-) -> Path:
+) -> Union[Path, CloudPath]:
     """
     Generate the full destination path and ensure the parent directory exists.
 
     Parameters
     ----------
-    output_dir : Path
+    output_dir : AnyPath | str
         The directory where the PDF should be stored.
     filename : str
         The base name of the file (extension '.pdf' is appended automatically).
 
     Returns
     -------
-    Path
+    Path, CloudPath
         The validated full path to the PDF file.
     """
-    output_dir.mkdir(parents=True, exist_ok=True)
-    return output_dir / f"{filename}.pdf"
+    return get_full_path(output_dir, FileType.PDF.format_filename(filename), MkDir())
 
 
 def save_pdf(
     content: Union[str, List[str], List[Figure]],
-    output_dir: Path,
+    output_dir: AnyPath | str,
     filename: str,
+    safe_call: bool = False,
     **kwargs: Any,
-) -> Path:
+) -> tuple[Union[Path, CloudPath], dict[str, Any]]:
     """
     Save text or Matplotlib figures to a PDF file.
 
@@ -894,30 +900,45 @@ def save_pdf(
     content : Union[str, List[str], List[Figure]]
         The data to persist. Can be a raw string, a list of strings,
         or a list of Matplotlib Figure objects.
-    output_dir : Path
+    output_dir : AnyPath | str
         The destination directory.
     filename : str
         The base name of the file (without extension).
+    safe_call : bool, default False
+        If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
+        from `**kwargs` before calling `pdf.savefig` or the `canvas.Canvas`
+        constructor.
     **kwargs : Any
-        Additional configuration for text rendering:
+        Additional configuration for text rendering or underlying save methods.
+        Supported text keys include:
         - page_size : tuple, default letter (8.5x11 inches)
         - margin : int, default 50 points
-        - title : str, optional document metadata title
+        - title : str, optional document metadata title.
 
     Returns
     -------
-    Path
+    full_path : Path, CloudPath
         The full path to the saved PDF file.
+    rejected_params : dict[str, Any]
+        A dictionary of parameters from `**kwargs` that were incompatible with the
+        active rendering method. Returns an empty dictionary if `safe_call` is False
+        or if variables like `page_size` were manually handled.
     """
     full_path = _get_pdf_fullpath(output_dir, filename)
+    rejected = {}
 
     # Handle Matplotlib Figures
     if isinstance(content, list) and len(content) > 0 and isinstance(content[0], Figure):
+        # Rejected parameters will be the same for every call, so they
+        # can be overwritten for each figure.
         with PdfPages(full_path) as pdf:
             for fig in content:
-                pdf.savefig(fig)
+                if safe_call:
+                    _, rejected = d_safe_call(pdf.savefig, kwargs, figure=fig)
+                else:
+                    pdf.savefig(fig)
                 plt.close(fig)
-        return full_path
+        return full_path, rejected
 
     # Handle Text
     final_lines: List[str] = []
@@ -931,9 +952,16 @@ def save_pdf(
     margin = kwargs.get("margin", 50)
     title = kwargs.get("title", None)
 
-    # Filter kwargs to avoid passing page_size/margin/title to canvas constructor
-    canvas_kwargs = {k: v for k, v in kwargs.items() if k not in ["page_size", "margin", "title"]}
-    c = canvas.Canvas(str(full_path), pagesize=page_size, **canvas_kwargs)
+    if safe_call:
+        c, rejected = d_safe_call(
+            canvas.Canvas, kwargs, filename=str(full_path), pagesize=page_size
+        )
+    else:
+        # Filter kwargs to avoid passing page_size/margin/title to canvas constructor
+        canvas_kwargs = {
+            k: v for k, v in kwargs.items() if k not in ["page_size", "margin", "title"]
+        }
+        c = canvas.Canvas(str(full_path), pagesize=page_size, **canvas_kwargs)
 
     if title:
         c.setTitle(title)
@@ -950,28 +978,42 @@ def save_pdf(
         y -= line_height
 
     c.save()
-    return full_path
+    return full_path, rejected
 
 
 def load_pdf(
     filepath: str | Path,
+    safe_call: bool = False,
     **kwargs: Any,
-) -> str:
+) -> tuple[str, dict[str, Any]]:
     """
     Load text content from PDF file.
 
     Note: This is a placeholder implementation. Full PDF text extraction
     requires additional dependencies like PyPDF2 or pdfplumber.
 
-    Args:
-        filepath: Path to PDF file
-        **kwargs: Additional arguments for PDF reader
+    Parameters
+    ----------
+    filepath : str | Path
+        Path to the target PDF file.
+    safe_call : bool, default False
+        If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
+        from `**kwargs` once a reader implementation is provided.
+    **kwargs : Any
+        Additional arguments for the PDF reader.
 
-    Returns:
-        Extracted text from PDF
+    Returns
+    -------
+    content : str
+        The extracted text from the PDF.
+    rejected_params : dict[str, Any]
+        A dictionary of parameters from `**kwargs` that were incompatible with the
+        loading method.
 
-    Raises:
-        NotImplementedError: Full PDF extraction requires additional dependencies
+    Raises
+    ------
+    NotImplementedError
+        Full PDF extraction requires additional dependencies (pdfplumber or PyPDF2).
     """
     raise NotImplementedError(
         "PDF text extraction requires additional dependencies. "
