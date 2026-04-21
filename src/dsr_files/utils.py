@@ -6,10 +6,15 @@ from pathlib import Path
 from typing import Literal, NamedTuple
 
 from cloudpathlib import AnyPath, CloudPath
+
 from dsr_files.enums import FileType
 
+PathLike = str | Path | CloudPath
 
-def validate_extension(filepath: str | Path, expected_extensions: str | list[str]) -> None:
+
+def validate_extension(
+    filepath: PathLike, expected_extensions: str | list[str]
+) -> None:
     """
     [DEPRECATED] Validate that a file has one of the expected extensions.
 
@@ -20,7 +25,7 @@ def validate_extension(filepath: str | Path, expected_extensions: str | list[str
 
     Parameters
     ----------
-    filepath : str | Path
+    filepath : str | Path | CloudPath
         The path to the file to validate.
     expected_extensions : str | list[str]
         A single extension (e.g., '.csv') or a list of valid
@@ -45,11 +50,14 @@ def validate_extension(filepath: str | Path, expected_extensions: str | list[str
         expected_extensions = [expected_extensions]
 
     # Ensure extensions start with a dot and are lowercased for comparison
-    valid_exts = [e.lower() if e.startswith(".") else f".{e.lower()}" for e in expected_extensions]
+    valid_exts = [
+        e.lower() if e.startswith(".") else f".{e.lower()}" for e in expected_extensions
+    ]
 
     if path.suffix.lower() not in valid_exts:
         raise ValueError(
-            f"Invalid file extension '{path.suffix}'. " f"Expected one of: {', '.join(valid_exts)}"
+            f"Invalid file extension '{path.suffix}'. "
+            f"Expected one of: {', '.join(valid_exts)}"
         )
 
 
@@ -72,7 +80,9 @@ class MkDir(NamedTuple):
     exist_ok: bool = True
 
 
-def get_full_path(output_dir: AnyPath | str, filename: str, mkdir: MkDir) -> CloudPath | Path:
+def get_full_path(
+    output_dir: PathLike, filename: str, mkdir: MkDir
+) -> CloudPath | Path:
     """
     Construct a full path from a directory and filename, optionally creating the directory.
 
@@ -81,7 +91,7 @@ def get_full_path(output_dir: AnyPath | str, filename: str, mkdir: MkDir) -> Clo
 
     Parameters
     ----------
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The target directory. Can be a local path string, a pathlib.Path,
         or a cloud URI (e.g., 's3://bucket/path').
     filename : str
@@ -120,7 +130,9 @@ def _get_valid_param_sets() -> dict:
     from dsr_files.yaml_handler import load_yaml
 
     path = Path(__file__).parent / "resources/params.yaml"
-    return load_yaml(str(path))[0]  # Accessing the data part of the (result, rejected) tuple
+    return load_yaml(str(path))[
+        0
+    ]  # Accessing the data part of the (result, rejected) tuple
 
 
 @functools.lru_cache(maxsize=8)

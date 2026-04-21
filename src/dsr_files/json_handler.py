@@ -10,9 +10,10 @@ from typing import Any, Union
 import numpy as np
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
-from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
+
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, PathLike, _get_valid_params, get_full_path
 
 
 def create_json(data: dict[str, Any]) -> dict[str, Any]:
@@ -34,7 +35,7 @@ def create_json(data: dict[str, Any]) -> dict[str, Any]:
 
 def save_json(
     data: dict[str, Any],
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     indent: int | None = 2,
     encoding: str = "utf-8",
@@ -48,7 +49,7 @@ def save_json(
     ----------
     data : dict[str, Any]
         The dictionary to save.
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (extension '.json' is appended automatically).
@@ -71,7 +72,9 @@ def save_json(
         A dictionary of parameters from `**kwargs` that were incompatible with the
         save method. Returns an empty dictionary if `safe_call` is False.
     """
-    full_path = get_full_path(output_dir, FileType.JSON.format_filename(filename), MkDir())
+    full_path = get_full_path(
+        output_dir, FileType.JSON.format_filename(filename), MkDir()
+    )
 
     # Ensure all data is JSON-serializable
     safe_data = to_JSON_safe(data)
@@ -92,7 +95,7 @@ def save_json(
 
 
 def load_json(
-    filepath: str | AnyPath,
+    filepath: PathLike,
     encoding: str = "utf-8",
     safe_call: bool = False,
     **kwargs: Any,
@@ -102,7 +105,7 @@ def load_json(
 
     Parameters
     ----------
-    filepath : str | AnyPath
+    filepath : str | Path | CloudPath
         Path to the target JSON file.
     encoding : str, default "utf-8"
         The character encoding used to read the file.

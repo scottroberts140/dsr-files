@@ -12,8 +12,6 @@ from typing import Any, Callable, List, Optional, Tuple, Union
 import matplotlib.font_manager as fm
 import matplotlib.pyplot as plt
 from cloudpathlib import AnyPath, CloudPath
-from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
 from matplotlib.backends.backend_pdf import PdfPages
 from matplotlib.figure import Figure
@@ -26,6 +24,9 @@ from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfgen import canvas
+
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, PathLike, get_full_path
 
 
 class PageOrientation(Enum):
@@ -50,7 +51,9 @@ class PageSize(Enum):
             case PageSize.A4:
                 return 8.27, 11.69
 
-        raise NotImplementedError(f"Dimensions for page size {self.name} not implemented.")
+        raise NotImplementedError(
+            f"Dimensions for page size {self.name} not implemented."
+        )
 
     def width(self, orientation: PageOrientation) -> float:
         """
@@ -73,7 +76,9 @@ class PageSize(Enum):
             case PageOrientation.PORTRAIT:
                 return w
 
-        raise NotImplementedError(f"Dimensions for orientation {orientation.name} not implemented.")
+        raise NotImplementedError(
+            f"Dimensions for orientation {orientation.name} not implemented."
+        )
 
     def height(self, orientation: PageOrientation) -> float:
         """
@@ -96,7 +101,9 @@ class PageSize(Enum):
             case PageOrientation.PORTRAIT:
                 return h
 
-        raise NotImplementedError(f"Dimensions for orientation {orientation.name} not implemented.")
+        raise NotImplementedError(
+            f"Dimensions for orientation {orientation.name} not implemented."
+        )
 
     @property
     def line_height(self) -> float:
@@ -114,7 +121,9 @@ class PageSize(Enum):
             case PageSize.A4:
                 return 0.025
 
-        raise NotImplementedError(f"Line height for page size {self.name} not implemented.")
+        raise NotImplementedError(
+            f"Line height for page size {self.name} not implemented."
+        )
 
     @property
     def row_height(self) -> float:
@@ -132,7 +141,9 @@ class PageSize(Enum):
             case PageSize.A4:
                 return 0.045
 
-        raise NotImplementedError(f"Row height for page size {self.name} not implemented.")
+        raise NotImplementedError(
+            f"Row height for page size {self.name} not implemented."
+        )
 
     @property
     def margins(self) -> Tuple[float, float, float, float]:  # L, R, T, B
@@ -150,7 +161,9 @@ class PageSize(Enum):
             case PageSize.A4:
                 return 0.06, 0.94, 0.90, 0.10
 
-        raise NotImplementedError(f"Default margins for page size {self.name} not implemented.")
+        raise NotImplementedError(
+            f"Default margins for page size {self.name} not implemented."
+        )
 
 
 @dataclass
@@ -211,8 +224,12 @@ class PageConfiguration:
         self.orientation = orientation
         self.colors = colors
         self.margins = margins
-        self.line_height = line_height if line_height is not None else self.page_size.line_height
-        self.row_height = row_height if row_height is not None else self.page_size.row_height
+        self.line_height = (
+            line_height if line_height is not None else self.page_size.line_height
+        )
+        self.row_height = (
+            row_height if row_height is not None else self.page_size.row_height
+        )
         self.header_func = header_func
         self.footer_func = footer_func
 
@@ -248,7 +265,12 @@ class PageConfiguration:
 
     @property
     def content_dimensions(self) -> Tuple[float, float, float, float]:
-        return (self.left_margin, self.bottom_margin, self.content_width, self.content_height)
+        return (
+            self.left_margin,
+            self.bottom_margin,
+            self.content_width,
+            self.content_height,
+        )
 
 
 class PDFDocument:
@@ -470,7 +492,9 @@ class PDFDocument:
         self._toc_temp_file_path = Path(temp_dir) / "temp_toc.pdf"
         dimensions_inches = self._page_configuration.page_dimensions
         dimensions_points = (dimensions_inches[0] * 72, dimensions_inches[1] * 72)
-        self._canvas = canvas.Canvas(str(self._toc_temp_file_path), pagesize=dimensions_points)
+        self._canvas = canvas.Canvas(
+            str(self._toc_temp_file_path), pagesize=dimensions_points
+        )
 
         # Register default 'sans-serif' and 'sans-serif bold' fonts in ReportLab
         font_path = fm.findfont(fm.FontProperties(family=["sans-serif"]))
@@ -642,7 +666,7 @@ class PDFDocument:
 
         while included_in_toc_count < include_in_toc_count:
             pdf_page = self.create_new_page(
-                page_name=f"Contents",
+                page_name="Contents",
                 print_page_name=not is_first_toc_page,
                 include_in_index=False,
                 is_toc_page=True,
@@ -716,7 +740,9 @@ class PDFDocument:
 
             if is_first_toc_page:
                 # Title
-                c.setFillColorRGB(title_rl_color[0], title_rl_color[1], title_rl_color[2])
+                c.setFillColorRGB(
+                    title_rl_color[0], title_rl_color[1], title_rl_color[2]
+                )
                 c.setFont("sans-serif-bold", 18)
                 title_y_pos = top_margin - 15
                 title = "Table of Contents"
@@ -725,7 +751,9 @@ class PDFDocument:
                 title_width = c.stringWidth(title, "sans-serif-bold", 18)
 
                 # Subtitle line
-                c.setStrokeColorRGB(title_rl_color[0], title_rl_color[1], title_rl_color[2])
+                c.setStrokeColorRGB(
+                    title_rl_color[0], title_rl_color[1], title_rl_color[2]
+                )
                 c.setLineWidth(1)
                 subtitle_line_y_pos = title_y_pos - 5
                 left_x = title_x_pos - (title_width / 2)
@@ -788,7 +816,7 @@ class PDFDocument:
         c.save()
 
     def save(
-        self, output_dir: AnyPath | str, filename: str, **kwargs: Any
+        self, output_dir: PathLike, filename: str, **kwargs: Any
     ) -> Union[Path, CloudPath]:
         """
         Compile and save the final interactive PDF document.
@@ -799,7 +827,7 @@ class PDFDocument:
 
         Parameters
         ----------
-        output_dir : AnyPath | str
+        output_dir : str | Path | CloudPath
             The destination directory for the final PDF.
         filename : str
             The base name of the file (extension '.pdf' is added).
@@ -814,7 +842,9 @@ class PDFDocument:
         """
         temp_dir = tempfile.gettempdir()
         temp_main_pdf_filepath = AnyPath(temp_dir) / f"temp_main_{filename}"
-        main_pdf_path, _ = save_pdf(self.content, str(temp_main_pdf_filepath), filename, **kwargs)
+        main_pdf_path, _ = save_pdf(
+            self.content, str(temp_main_pdf_filepath), filename, **kwargs
+        )
         writer = PdfWriter()
         main_reader = PdfReader(str(main_pdf_path))
 
@@ -839,7 +869,8 @@ class PDFDocument:
                         target_page_index=entry.page_index,
                     )
                     writer.add_annotation(
-                        page_number=toc_page.actual_page_number - 1, annotation=annotation
+                        page_number=toc_page.actual_page_number - 1,
+                        annotation=annotation,
                     )
 
         # Remaining pages
@@ -859,7 +890,7 @@ class PDFDocument:
 
 
 def _get_pdf_fullpath(
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
 ) -> Union[Path, CloudPath]:
     """
@@ -867,7 +898,7 @@ def _get_pdf_fullpath(
 
     Parameters
     ----------
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The directory where the PDF should be stored.
     filename : str
         The base name of the file (extension '.pdf' is appended automatically).
@@ -882,7 +913,7 @@ def _get_pdf_fullpath(
 
 def save_pdf(
     content: Union[str, List[str], List[Figure]],
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     safe_call: bool = False,
     **kwargs: Any,
@@ -900,7 +931,7 @@ def save_pdf(
     content : Union[str, List[str], List[Figure]]
         The data to persist. Can be a raw string, a list of strings,
         or a list of Matplotlib Figure objects.
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (without extension).
@@ -928,7 +959,11 @@ def save_pdf(
     rejected = {}
 
     # Handle Matplotlib Figures
-    if isinstance(content, list) and len(content) > 0 and isinstance(content[0], Figure):
+    if (
+        isinstance(content, list)
+        and len(content) > 0
+        and isinstance(content[0], Figure)
+    ):
         # Rejected parameters will be the same for every call, so they
         # can be overwritten for each figure.
         with PdfPages(full_path) as pdf:

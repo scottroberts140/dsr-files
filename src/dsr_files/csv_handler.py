@@ -5,9 +5,10 @@ from typing import Any, Union
 
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
-from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
+
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, PathLike, _get_valid_params, get_full_path
 
 
 def create_csv(data: dict[str, Any] | pd.DataFrame) -> pd.DataFrame:
@@ -32,7 +33,7 @@ def create_csv(data: dict[str, Any] | pd.DataFrame) -> pd.DataFrame:
 
 def save_csv(
     data: pd.DataFrame | dict[str, Any],
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     index: bool = False,
     encoding: str = "utf-8",
@@ -46,7 +47,7 @@ def save_csv(
     ----------
     data : pd.DataFrame | dict[str, Any]
         The data to persist to disk.
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (extension '.csv' is appended automatically).
@@ -69,7 +70,9 @@ def save_csv(
         A dictionary of parameters from `**kwargs` that were incompatible with the
         save method. Returns an empty dictionary if `safe_call` is False.
     """
-    full_path = get_full_path(output_dir, FileType.CSV.format_filename(filename), MkDir())
+    full_path = get_full_path(
+        output_dir, FileType.CSV.format_filename(filename), MkDir()
+    )
     df = create_csv(data)
 
     if safe_call:
@@ -89,7 +92,7 @@ def save_csv(
 
 
 def load_csv(
-    filepath: str | AnyPath,
+    filepath: PathLike,
     encoding: str = "utf-8",
     safe_call: bool = False,
     **kwargs: Any,
@@ -99,7 +102,7 @@ def load_csv(
 
     Parameters
     ----------
-    filepath : str | AnyPath
+    filepath : str | Path | CloudPath
         Path to the target CSV file.
     encoding : str, default "utf-8"
         The character encoding used to read the file.

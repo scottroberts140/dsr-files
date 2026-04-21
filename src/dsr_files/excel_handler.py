@@ -7,9 +7,10 @@ from typing import Any, Literal, Union
 
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
-from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
+
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, PathLike, get_full_path
 
 # Define a type alias for the supported engines
 ExcelEngine = Literal["xlsxwriter", "openpyxl", "odf", "auto"]
@@ -70,7 +71,7 @@ class ExcelSheetConfig:
 
 def save_excel(
     data: pd.DataFrame | list[ExcelSheetConfig],
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     engine: ExcelEngine = "auto",
     safe_call: bool = False,
@@ -84,7 +85,7 @@ def save_excel(
     data : pd.DataFrame | list[ExcelSheetConfig]
         Either a single DataFrame for a one-sheet workbook, or a list
         of ExcelSheetConfig objects for multiple sheets.
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (extension '.xlsx' is added).
@@ -110,7 +111,9 @@ def save_excel(
     ModuleNotFoundError
         If the required Excel engine is not installed in the environment.
     """
-    full_path = get_full_path(output_dir, FileType.EXCEL.format_filename(filename), MkDir())
+    full_path = get_full_path(
+        output_dir, FileType.EXCEL.format_filename(filename), MkDir()
+    )
 
     # Map 'auto' to None so pandas uses its default detection
     write_engine = None if engine == "auto" else engine
@@ -161,7 +164,7 @@ def save_excel(
 
 
 def load_excel(
-    filepath: str | AnyPath,
+    filepath: PathLike,
     sheet_name: str | int = 0,
     safe_call: bool = False,
     **kwargs: Any,
@@ -171,7 +174,7 @@ def load_excel(
 
     Parameters
     ----------
-    filepath : str | AnyPath
+    filepath : str | Path | CloudPath
         Path to the Excel file.
     sheet_name : str | int, default 0
         The sheet to read (name or zero-based index).
@@ -202,7 +205,9 @@ def load_excel(
         raise FileNotFoundError(f"File not found: {path_obj}")
 
     if safe_call:
-        df, rejected = d_safe_call(pd.read_excel, kwargs, io=path_obj, sheet_name=sheet_name)
+        df, rejected = d_safe_call(
+            pd.read_excel, kwargs, io=path_obj, sheet_name=sheet_name
+        )
         return df, rejected
     else:
         df = pd.read_excel(path_obj, sheet_name=sheet_name, **kwargs)

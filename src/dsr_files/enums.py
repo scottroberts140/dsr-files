@@ -6,8 +6,9 @@ dsr-files library for reading, writing, and auditing.
 """
 
 from enum import Flag, auto
+from pathlib import Path
 
-from cloudpathlib import AnyPath
+from cloudpathlib import AnyPath, CloudPath
 
 
 class FileType(Flag):
@@ -118,7 +119,7 @@ class FileType(Flag):
             if member in self and member != FileType(0)
         )
 
-    def validate_extension(self, filepath: str | AnyPath) -> None:
+    def validate_extension(self, filepath: str | Path | CloudPath) -> None:
         """
         Validate that a file's extension is compatible with the FileType.
 

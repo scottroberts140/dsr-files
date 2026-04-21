@@ -3,16 +3,17 @@ from pathlib import Path
 from typing import Any, Optional, Union
 
 import yaml
-from cloudpathlib import AnyPath, CloudPath
+from cloudpathlib import CloudPath
+from dsr_utils.reflection import safe_call as d_safe_call
+
 from dsr_files.enums import FileType
 from dsr_files.json_handler import to_JSON_safe
-from dsr_files.utils import MkDir, get_full_path
-from dsr_utils.reflection import safe_call as d_safe_call
+from dsr_files.utils import MkDir, PathLike, get_full_path
 
 
 def save_yaml(
     data: Any,
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     header: Optional[str] = None,
     safe_call: bool = False,
@@ -27,9 +28,9 @@ def save_yaml(
 
     Parameters
     ----------
-    data : AnyPath | str
+    data : Any
         The Python object, list, or dictionary to be serialized.
-    output_dir : Path
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (extension '.yaml' is appended automatically).
@@ -58,7 +59,9 @@ def save_yaml(
     - Sets `sort_keys=False` to preserve the original order of recommendations
       or dictionary entries.
     """
-    full_path = get_full_path(output_dir, FileType.YAML.format_filename(filename), MkDir())
+    full_path = get_full_path(
+        output_dir, FileType.YAML.format_filename(filename), MkDir()
+    )
     serializable_data = to_JSON_safe(data)
 
     with open(full_path, "w", encoding="utf-8") as f:
@@ -78,7 +81,9 @@ def save_yaml(
             )
             return full_path, rejected
         else:
-            yaml.safe_dump(serializable_data, f, default_flow_style=False, sort_keys=False)
+            yaml.safe_dump(
+                serializable_data, f, default_flow_style=False, sort_keys=False
+            )
             return full_path, {}
 
 
@@ -96,13 +101,15 @@ class UniqueKeyLoader(yaml.SafeLoader):
         for key_node, value_node in node.value:
             key = self.construct_object(key_node, deep=deep)
             if key in mapping:
-                raise yaml.constructor.ConstructorError(f"Duplicate recommendation ID found: {key}")
+                raise yaml.constructor.ConstructorError(
+                    f"Duplicate recommendation ID found: {key}"
+                )
             mapping.append(key)
         return super().construct_mapping(node, deep)
 
 
 def load_yaml(
-    filepath: AnyPath | str,
+    filepath: PathLike,
     safe_call: bool = False,
     **kwargs: Any,
 ) -> Any:
@@ -111,7 +118,7 @@ def load_yaml(
 
     Parameters
     ----------
-    filepath : AnyPath | str
+    filepath : str | Path | CloudPath
         The path to the YAML file to be loaded.
     safe_call : bool, default False
         If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
@@ -143,7 +150,9 @@ def load_yaml(
 
     with open(str(filepath), "r", encoding="utf-8") as f:
         if safe_call:
-            y, rejected = d_safe_call(yaml.load, kwargs, stream=f, Loader=UniqueKeyLoader)
+            y, rejected = d_safe_call(
+                yaml.load, kwargs, stream=f, Loader=UniqueKeyLoader
+            )
             return y, rejected
         else:
             y = yaml.load(f, Loader=UniqueKeyLoader)

@@ -5,8 +5,9 @@ from typing import Any, Literal, Union, cast
 
 import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
+
 from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, _get_valid_params, get_full_path
+from dsr_files.utils import MkDir, PathLike, _get_valid_params, get_full_path
 
 # Define supported engines for Parquet operations
 ParquetEngine = Literal["pyarrow", "fastparquet", "auto"]
@@ -14,7 +15,7 @@ ParquetEngine = Literal["pyarrow", "fastparquet", "auto"]
 
 def save_parquet(
     data: pd.DataFrame,
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     engine: ParquetEngine = "auto",
     compression: str | None = "snappy",
@@ -29,7 +30,7 @@ def save_parquet(
     ----------
     data : pd.DataFrame
         The DataFrame to persist to disk.
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (extension '.parquet' is added).
@@ -55,7 +56,9 @@ def save_parquet(
         save method. Returns an empty dictionary if `safe_call` is False.
     """
     # Standard path construction
-    full_path = get_full_path(output_dir, FileType.PARQUET.format_filename(filename), MkDir())
+    full_path = get_full_path(
+        output_dir, FileType.PARQUET.format_filename(filename), MkDir()
+    )
 
     # Fastparquet fix: Convert Arrow-backed strings to object dtype
     if engine == "fastparquet":
@@ -97,7 +100,7 @@ def save_parquet(
 
 
 def load_parquet(
-    filepath: str | AnyPath,
+    filepath: PathLike,
     engine: ParquetEngine = "auto",
     columns: list[str] | None = None,
     safe_call: bool = False,
@@ -108,7 +111,7 @@ def load_parquet(
 
     Parameters
     ----------
-    filepath : str | AnyPath
+    filepath : str | Path | CloudPath
         Path to the target Parquet file.
     engine : ParquetEngine, default "auto"
         Parquet library to use (pyarrow or fastparquet).

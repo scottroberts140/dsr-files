@@ -5,14 +5,15 @@ from typing import Any, Union, cast
 
 import joblib
 from cloudpathlib import AnyPath, CloudPath
-from dsr_files.enums import FileType
-from dsr_files.utils import MkDir, _get_valid_params, get_full_path
 from dsr_utils.reflection import safe_call as d_safe_call
+
+from dsr_files.enums import FileType
+from dsr_files.utils import MkDir, PathLike, _get_valid_params, get_full_path
 
 
 def save_joblib(
     data: Any,
-    output_dir: AnyPath | str,
+    output_dir: PathLike,
     filename: str,
     compress: int | tuple[str, int] = 3,
     safe_call: bool = False,
@@ -25,7 +26,7 @@ def save_joblib(
     ----------
     data : Any
         The Python object to persist (e.g., a trained model or a large array).
-    output_dir : AnyPath | str
+    output_dir : str | Path | CloudPath
         The destination directory.
     filename : str
         The base name of the file (extension '.joblib' is appended automatically).
@@ -47,7 +48,9 @@ def save_joblib(
         A dictionary of parameters from `**kwargs` that were incompatible with the
         save method. Returns an empty dictionary if `safe_call` is False.
     """
-    full_path = get_full_path(output_dir, FileType.JOBLIB.format_filename(filename), MkDir())
+    full_path = get_full_path(
+        output_dir, FileType.JOBLIB.format_filename(filename), MkDir()
+    )
 
     # Cast compress to Any specifically for the call to satisfy the restrictive stub
     if safe_call:
@@ -67,7 +70,7 @@ def save_joblib(
 
 
 def load_joblib(
-    filepath: str | AnyPath,
+    filepath: PathLike,
     safe_call: bool = False,
     **kwargs: Any,
 ) -> tuple[Any, dict[str, Any]]:
@@ -76,7 +79,7 @@ def load_joblib(
 
     Parameters
     ----------
-    filepath : str | AnyPath
+    filepath : str | Path | CloudPath
         Path to the target JOBLIB file.
     safe_call : bool, default False
         If True, utilizes `dsr_utils.safe_call` to filter incompatible parameters
@@ -108,7 +111,9 @@ def load_joblib(
 
     if safe_call:
         valid_params = _get_valid_params(FileType.JOBLIB, "load")
-        j, rejected = d_safe_call(joblib.load, kwargs, filename=path_obj, valid_params=valid_params)
+        j, rejected = d_safe_call(
+            joblib.load, kwargs, filename=path_obj, valid_params=valid_params
+        )
         return j, rejected
     else:
         j = joblib.load(path_obj, **kwargs)
