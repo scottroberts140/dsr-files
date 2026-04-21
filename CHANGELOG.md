@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.1.1] - 2026-04-21
+
+### Changed
+
+- Standardized path-facing APIs around a shared `PathLike` alias, improving static typing for local `Path`, cloud `CloudPath`, and string inputs without relying on `str(...)` workarounds.
+- Updated handlers and utilities to use the new path typing consistently across CSV, JSON, JOBLIB, YAML, Parquet, Excel, and PDF operations.
+- Switched package version exposure to `importlib.metadata.version(...)` with a safe fallback so installed distributions report their real release version.
+
 ## [3.1.0] - 2026-04-19
 
 ### Added
