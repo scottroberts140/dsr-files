@@ -7,7 +7,7 @@
 
 File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
 
-**Version 3.1.0**: Introduced **Configuration-Driven Parameter Filtering** using a centralized YAML registry. Optimized internal utility performance with **LRU caching** and enhanced **Circular Dependency Resolution** for more robust library architecture.
+**Version 3.1.1**: Standardized handler path typing around a shared **PathLike** alias for local, cloud, and string inputs, and updated package version reporting to use installed distribution metadata with a safe fallback.
 
 ## Features
 
