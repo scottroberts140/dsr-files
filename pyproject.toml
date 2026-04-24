@@ -21,7 +21,7 @@ classifiers = [
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "pandas>=3.0.2",
+    "pandas>=2.2.0,<3.0.0",
     "numpy>=2.4.4",
     "pyarrow>=23.0.1",       # Essential for high-performance Parquet handling
     "fastparquet>=2026.3.0", # Latest version as of March 2026
