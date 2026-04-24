@@ -7,27 +7,26 @@ import pytest
 from cloudpathlib import CloudPath
 from dsr_files.csv_handler import MkDir, _get_valid_params, get_full_path, save_csv
 from dsr_files.enums import FileType
-from dsr_files.utils import _get_valid_param_sets, validate_extension
+from dsr_files.utils import _get_valid_param_sets
 
 
 def test_validate_extension_success():
     """Verify validation passes for correct extensions."""
     # Should not raise any error
-    validate_extension("data.csv", ".csv")
-    validate_extension("report.XLSX", ".xlsx")
-    validate_extension("model.joblib", [".joblib", ".pkl"])
+    FileType.CSV.validate_extension("data.csv")
+    FileType.EXCEL.validate_extension("report.XLSX")
+    FileType.JOBLIB.validate_extension("model.joblib")
 
 
 def test_validate_extension_failure():
     """Verify ValueError is raised for mismatched extensions."""
-    with pytest.raises(ValueError, match="Expected one of: .csv"):
-        validate_extension("data.txt", ".csv")
+    with pytest.raises(ValueError, match="Invalid file extension for CSV"):
+        FileType.CSV.validate_extension("data.parquet")
 
 
 def test_validate_extension_formatting():
     """Verify the utility handles extensions missing the leading dot."""
-    # Should automatically prepend the dot and succeed
-    validate_extension("data.parquet", "parquet")
+    FileType.PARQUET.validate_extension("data.parquet")
 
 
 def test_get_full_path_local(tmp_path):
