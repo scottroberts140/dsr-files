@@ -13,6 +13,7 @@ from cloudpathlib import AnyPath, CloudPath
 from dsr_utils.reflection import safe_call as d_safe_call
 
 from dsr_files.enums import FileType
+from dsr_files.joblib_handler import load_joblib_dataframe
 from dsr_files.utils import MkDir, PathLike, _get_valid_params, get_full_path
 
 
@@ -207,3 +208,31 @@ def to_JSON_safe(o: Any) -> Any:
         return [to_JSON_safe(i) for i in o.tolist()]
 
     return o
+
+
+def from_joblib(
+    source_dir: PathLike,
+    filename: str,
+    output_dir: PathLike | None = None,
+    output_filename: str | None = None,
+    safe_call: bool = False,
+    **kwargs: Any,
+) -> tuple[Union[Path, CloudPath], dict[str, Any]]:
+    """
+    Convert a JOBLIB DataFrame artifact to JSON records.
+
+    Parameters are equivalent to other handler-level ``from_joblib`` helpers.
+    """
+    df, rejected = load_joblib_dataframe(source_dir, filename, safe_call=safe_call)
+    target_dir = source_dir if output_dir is None else output_dir
+    stem = Path(FileType.JOBLIB.format_filename(filename)).stem
+    target_name = output_filename or stem
+
+    output_path, save_rejected = save_json(
+        df.to_dict(orient="records"),
+        output_dir=target_dir,
+        filename=target_name,
+        safe_call=safe_call,
+        **kwargs,
+    )
+    return output_path, {**rejected, **save_rejected}

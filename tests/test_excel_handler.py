@@ -70,6 +70,68 @@ def test_load_excel_with_safe_call(sample_df, tmp_path):
     pd.DataFrame({"x": [1]}).to_excel(file_path, index=False)
 
     # Pass an invalid parameter to verify it is caught in 'rejected'
-    df, rejected = excel_handler.load_excel(file_path, safe_call=True, fake_param="value")
+    df, rejected = excel_handler.load_excel(
+        file_path, safe_call=True, fake_param="value"
+    )
     assert "fake_param" in rejected
     assert isinstance(df, pd.DataFrame)
+
+
+def test_save_excel_truncates_overlong_cell_text(tmp_path):
+    """Verify overlong cell text is truncated to Excel's hard character limit."""
+    long_text = "x" * 40000
+    df = pd.DataFrame({"payload": [long_text]})
+
+    path, _ = excel_handler.save_excel(df, tmp_path, "long_cell", index=False)
+    loaded, _ = excel_handler.load_excel(path)
+
+    assert len(loaded.iloc[0]["payload"]) <= 32767
+    assert str(loaded.iloc[0]["payload"]).endswith("... [truncated]")
+
+
+def test_save_excel_truncates_overlong_object_cell_text(tmp_path):
+    """Verify large object repr values are truncated before Excel write."""
+    long_object = {"payload": "x" * 76000}
+    df = pd.DataFrame({"payload": [long_object]})
+
+    path, _ = excel_handler.save_excel(df, tmp_path, "long_object_cell", index=False)
+    loaded, _ = excel_handler.load_excel(path)
+
+    assert len(str(loaded.iloc[0]["payload"])) <= 32767
+    assert str(loaded.iloc[0]["payload"]).endswith("... [truncated]")
+
+
+def test_replace_excel_sheet_replaces_existing_sheet(tmp_path):
+    """Verify replacing an existing sheet updates only that sheet's content."""
+    original = pd.DataFrame({"A": [1, 2], "B": [3, 4]})
+    updated = pd.DataFrame({"A": [9], "B": [8]})
+    other = pd.DataFrame({"X": [10]})
+
+    workbook_path, _ = excel_handler.save_excel(
+        [
+            ExcelSheetConfig(data=original, sheet_name="Sheet1"),
+            ExcelSheetConfig(data=other, sheet_name="Sheet2"),
+        ],
+        tmp_path,
+        "replace_test",
+    )
+
+    excel_handler.replace_excel_sheet(workbook_path, "Sheet1", updated)
+
+    loaded_sheet1, _ = excel_handler.load_excel(workbook_path, sheet_name="Sheet1")
+    loaded_sheet2, _ = excel_handler.load_excel(workbook_path, sheet_name="Sheet2")
+
+    pd.testing.assert_frame_equal(loaded_sheet1, updated)
+    pd.testing.assert_frame_equal(loaded_sheet2, other, check_dtype=False)
+
+
+def test_replace_excel_sheet_raises_when_workbook_missing(tmp_path):
+    """Verify replacing a sheet fails with a clear error when workbook is missing."""
+    missing = tmp_path / "missing.xlsx"
+
+    with pytest.raises(FileNotFoundError, match="Workbook not found"):
+        excel_handler.replace_excel_sheet(
+            missing,
+            "Sheet1",
+            pd.DataFrame({"A": [1]}),
+        )

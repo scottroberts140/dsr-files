@@ -7,17 +7,23 @@ Supports CSV, JSON, JOBLIB, PARQUET, YAML, Excel, and PDF file operations.
 from importlib.metadata import PackageNotFoundError, version
 
 from dsr_files.csv_handler import create_csv, load_csv, save_csv
+from dsr_files.csv_handler import from_joblib as csv_from_joblib
 from dsr_files.enums import FileType
 from dsr_files.excel_handler import (
     ExcelSheetConfig,
     create_excel,
     load_excel,
+    replace_excel_sheet,
     save_excel,
 )
-from dsr_files.joblib_handler import load_joblib, save_joblib
+from dsr_files.excel_handler import from_joblib as excel_from_joblib
+from dsr_files.joblib_handler import load_joblib, load_joblib_dataframe, save_joblib
 from dsr_files.json_handler import create_json, load_json, save_json, to_JSON_safe
+from dsr_files.json_handler import from_joblib as json_from_joblib
+from dsr_files.parquet_handler import from_joblib as parquet_from_joblib
 from dsr_files.parquet_handler import load_parquet, save_parquet
 from dsr_files.utils import MkDir, get_full_path, validate_extension
+from dsr_files.yaml_handler import from_joblib as yaml_from_joblib
 from dsr_files.yaml_handler import load_yaml, save_yaml
 
 try:
@@ -50,20 +56,27 @@ __all__ = [
     "save_csv",
     "load_csv",
     "create_csv",
+    "csv_from_joblib",
     "save_excel",
     "load_excel",
     "create_excel",
+    "replace_excel_sheet",
     "ExcelSheetConfig",
+    "excel_from_joblib",
     "save_json",
     "load_json",
     "create_json",
     "to_JSON_safe",
+    "json_from_joblib",
     "save_joblib",
     "load_joblib",
+    "load_joblib_dataframe",
     "save_parquet",
     "load_parquet",
+    "parquet_from_joblib",
     "load_yaml",
     "save_yaml",
+    "yaml_from_joblib",
     "validate_extension",
     "save_pdf",
     "load_pdf",

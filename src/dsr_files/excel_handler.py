@@ -10,10 +10,14 @@ from cloudpathlib import AnyPath, CloudPath
 from dsr_utils.reflection import safe_call as d_safe_call
 
 from dsr_files.enums import FileType
+from dsr_files.joblib_handler import load_joblib_dataframe
 from dsr_files.utils import MkDir, PathLike, get_full_path
 
 # Define a type alias for the supported engines
 ExcelEngine = Literal["xlsxwriter", "openpyxl", "odf", "auto"]
+
+EXCEL_MAX_CELL_CHARS = 32767
+TRUNCATION_SUFFIX = "... [truncated]"
 
 
 def create_excel(data: pd.DataFrame | dict[Any, Any] | list[Any]) -> pd.DataFrame:
@@ -44,6 +48,37 @@ def create_excel(data: pd.DataFrame | dict[Any, Any] | list[Any]) -> pd.DataFram
     except Exception as e:
         logging.error(f"Failed to convert data to DataFrame: {e}")
         raise ValueError(f"Could not convert input to DataFrame: {e}") from e
+
+
+def _truncate_excel_cell_value(value: Any) -> Any:
+    """Trim overlong cell values to Excel's max character limit.
+
+    Pandas/XlsxWriter stringifies many object values (e.g., dict/list) at write
+    time, so we proactively truncate those representations as well.
+    """
+    if pd.isna(value):
+        return value
+
+    if isinstance(value, str):
+        if len(value) <= EXCEL_MAX_CELL_CHARS:
+            return value
+        keep = EXCEL_MAX_CELL_CHARS - len(TRUNCATION_SUFFIX)
+        return f"{value[:keep]}{TRUNCATION_SUFFIX}"
+
+    rendered = str(value)
+    if len(rendered) <= EXCEL_MAX_CELL_CHARS:
+        return value
+
+    keep = EXCEL_MAX_CELL_CHARS - len(TRUNCATION_SUFFIX)
+    return f"{rendered[:keep]}{TRUNCATION_SUFFIX}"
+
+
+def _sanitize_excel_dataframe(df: pd.DataFrame) -> pd.DataFrame:
+    """Return a copy with cell text constrained to Excel length limits."""
+    if df.empty:
+        return df
+
+    return df.map(_truncate_excel_cell_value)
 
 
 @dataclass
@@ -121,8 +156,12 @@ def save_excel(
     try:
         if safe_call:
             if isinstance(data, pd.DataFrame):
+                safe_df = _sanitize_excel_dataframe(data)
                 _, rejected = d_safe_call(
-                    data.to_excel, kwargs, excel_writer=full_path, engine=write_engine
+                    safe_df.to_excel,
+                    kwargs,
+                    excel_writer=full_path,
+                    engine=write_engine,
                 )
                 return full_path, rejected
             else:
@@ -131,7 +170,7 @@ def save_excel(
                 rejected = {}
                 with pd.ExcelWriter(full_path, engine=write_engine) as writer:
                     for sheet_cfg in data:
-                        df = create_excel(sheet_cfg.data)
+                        df = _sanitize_excel_dataframe(create_excel(sheet_cfg.data))
                         _, rejected = d_safe_call(
                             df.to_excel,
                             kwargs,
@@ -144,11 +183,12 @@ def save_excel(
                 return full_path, rejected
         else:
             if isinstance(data, pd.DataFrame):
-                data.to_excel(full_path, engine=write_engine, **kwargs)
+                safe_df = _sanitize_excel_dataframe(data)
+                safe_df.to_excel(full_path, engine=write_engine, **kwargs)
             else:
                 with pd.ExcelWriter(full_path, engine=write_engine) as writer:
                     for sheet_cfg in data:
-                        df = create_excel(sheet_cfg.data)
+                        df = _sanitize_excel_dataframe(create_excel(sheet_cfg.data))
                         df.to_excel(
                             writer,
                             sheet_name=sheet_cfg.sheet_name,
@@ -161,6 +201,52 @@ def save_excel(
         target = engine if engine != "auto" else "openpyxl/xlsxwriter"
         logging.error(f"Excel export failed: Install engine (pip install {target})")
         raise ModuleNotFoundError(f"Missing Excel engine: {e}") from e
+
+
+def replace_excel_sheet(
+    filepath: PathLike,
+    sheet_name: str,
+    data: pd.DataFrame | dict[Any, Any] | list[Any],
+    index: bool = False,
+    header: bool = True,
+    sanitize_cells: bool = True,
+) -> None:
+    """Replace (or add) a sheet in an existing Excel workbook.
+
+    Parameters
+    ----------
+    filepath : PathLike
+        Path to an existing workbook.
+    sheet_name : str
+        Sheet to replace (or create if missing).
+    data : pd.DataFrame | dict[Any, Any] | list[Any]
+        Data payload written to the target sheet.
+    index : bool, default False
+        Whether to include DataFrame index.
+    header : bool, default True
+        Whether to include header row.
+    sanitize_cells : bool, default True
+        Whether to truncate overlong cell values to Excel-safe limits before write.
+
+    Raises
+    ------
+    FileNotFoundError
+        If the workbook file does not exist.
+    """
+    full_path = AnyPath(filepath)
+    if not full_path.exists():
+        raise FileNotFoundError(f"Workbook not found: {full_path}")
+
+    df = create_excel(data)
+    if sanitize_cells:
+        df = _sanitize_excel_dataframe(df)
+    with pd.ExcelWriter(
+        full_path,
+        engine="openpyxl",
+        mode="a",
+        if_sheet_exists="replace",
+    ) as writer:
+        df.to_excel(writer, sheet_name=sheet_name, index=index, header=header)
 
 
 def load_excel(
@@ -212,3 +298,31 @@ def load_excel(
     else:
         df = pd.read_excel(path_obj, sheet_name=sheet_name, **kwargs)
         return df, {}
+
+
+def from_joblib(
+    source_dir: PathLike,
+    filename: str,
+    output_dir: PathLike | None = None,
+    output_filename: str | None = None,
+    safe_call: bool = False,
+    **kwargs: Any,
+) -> tuple[Union[Path, CloudPath], dict[str, Any]]:
+    """
+    Convert a JOBLIB DataFrame artifact to Excel.
+
+    Parameters are equivalent to other handler-level ``from_joblib`` helpers.
+    """
+    df, rejected = load_joblib_dataframe(source_dir, filename, safe_call=safe_call)
+    target_dir = source_dir if output_dir is None else output_dir
+    stem = Path(FileType.JOBLIB.format_filename(filename)).stem
+    target_name = output_filename or stem
+
+    output_path, save_rejected = save_excel(
+        df,
+        output_dir=target_dir,
+        filename=target_name,
+        safe_call=safe_call,
+        **kwargs,
+    )
+    return output_path, {**rejected, **save_rejected}

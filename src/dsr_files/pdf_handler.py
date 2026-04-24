@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import io
 import tempfile
+import warnings
 from dataclasses import dataclass
 from enum import Enum, auto
 from pathlib import Path
@@ -968,10 +969,19 @@ def save_pdf(
         # can be overwritten for each figure.
         with PdfPages(full_path) as pdf:
             for fig in content:
-                if safe_call:
-                    _, rejected = d_safe_call(pdf.savefig, kwargs, figure=fig)
-                else:
-                    pdf.savefig(fig)
+                with warnings.catch_warnings():
+                    warnings.filterwarnings(
+                        "ignore",
+                        message=(
+                            r"There are no gridspecs with layoutgrids\. "
+                            r"Possibly did not call parent GridSpec with the \"figure\" keyword"
+                        ),
+                        category=UserWarning,
+                    )
+                    if safe_call:
+                        _, rejected = d_safe_call(pdf.savefig, kwargs, figure=fig)
+                    else:
+                        pdf.savefig(fig)
                 plt.close(fig)
         return full_path, rejected
 

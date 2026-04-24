@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any, Union, cast
 
 import joblib
+import pandas as pd
 from cloudpathlib import AnyPath, CloudPath
 from dsr_utils.reflection import safe_call as d_safe_call
 
@@ -118,3 +119,46 @@ def load_joblib(
     else:
         j = joblib.load(path_obj, **kwargs)
         return j, {}
+
+
+def load_joblib_dataframe(
+    source_dir: PathLike,
+    filename: str,
+    safe_call: bool = False,
+    **kwargs: Any,
+) -> tuple[pd.DataFrame, dict[str, Any]]:
+    """
+    Load a JOBLIB artifact from directory + filename and validate DataFrame type.
+
+    Parameters
+    ----------
+    source_dir : str | Path | CloudPath
+        Directory containing the source JOBLIB file.
+    filename : str
+        Source file name with or without the ``.joblib`` extension.
+    safe_call : bool, default False
+        Whether to filter unsupported kwargs before calling ``joblib.load``.
+    **kwargs : Any
+        Additional arguments forwarded to :func:`load_joblib`.
+
+    Returns
+    -------
+    tuple[pd.DataFrame, dict[str, Any]]
+        Loaded DataFrame and rejected kwargs dict.
+
+    Raises
+    ------
+    TypeError
+        If the loaded object is not a pandas DataFrame.
+    """
+    source_file = FileType.JOBLIB.format_filename(filename)
+    source_path = AnyPath(source_dir) / source_file
+    obj, rejected = load_joblib(source_path, safe_call=safe_call, **kwargs)
+
+    if not isinstance(obj, pd.DataFrame):
+        raise TypeError(
+            "Expected a pandas DataFrame in JOBLIB artifact "
+            f"'{source_path}', but loaded {type(obj).__name__}."
+        )
+
+    return obj, rejected

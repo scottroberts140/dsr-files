@@ -8,6 +8,7 @@ from cloudpathlib import AnyPath, CloudPath
 from dsr_utils.reflection import safe_call as d_safe_call
 
 from dsr_files.enums import FileType
+from dsr_files.joblib_handler import load_joblib_dataframe
 from dsr_files.utils import MkDir, PathLike, _get_valid_params, get_full_path
 
 
@@ -147,3 +148,44 @@ def load_csv(
     else:
         df = pd.read_csv(path_obj, encoding=encoding, **kwargs)
         return df, {}
+
+
+def from_joblib(
+    source_dir: PathLike,
+    filename: str,
+    output_dir: PathLike | None = None,
+    output_filename: str | None = None,
+    safe_call: bool = False,
+    **kwargs: Any,
+) -> tuple[Union[Path, CloudPath], dict[str, Any]]:
+    """
+    Convert a JOBLIB DataFrame artifact to CSV.
+
+    Parameters
+    ----------
+    source_dir : str | Path | CloudPath
+        Directory containing the source JOBLIB artifact.
+    filename : str
+        JOBLIB filename with or without ``.joblib`` extension.
+    output_dir : str | Path | CloudPath | None, default None
+        Destination directory for CSV output. Defaults to ``source_dir``.
+    output_filename : str | None, default None
+        Output filename stem. Defaults to the JOBLIB stem.
+    safe_call : bool, default False
+        Whether to filter unsupported kwargs for load/save calls.
+    **kwargs : Any
+        Additional kwargs forwarded to :func:`save_csv`.
+    """
+    df, rejected = load_joblib_dataframe(source_dir, filename, safe_call=safe_call)
+    target_dir = source_dir if output_dir is None else output_dir
+    stem = Path(FileType.JOBLIB.format_filename(filename)).stem
+    target_name = output_filename or stem
+
+    output_path, save_rejected = save_csv(
+        df,
+        output_dir=target_dir,
+        filename=target_name,
+        safe_call=safe_call,
+        **kwargs,
+    )
+    return output_path, {**rejected, **save_rejected}
