@@ -147,7 +147,10 @@ def save_excel(
         If the required Excel engine is not installed in the environment.
     """
     full_path = get_full_path(
-        output_dir, FileType.EXCEL.format_filename(filename), MkDir()
+        output_dir,
+        FileType.EXCEL.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
     )
 
     # Map 'auto' to None so pandas uses its default detection

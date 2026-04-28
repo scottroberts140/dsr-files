@@ -909,7 +909,12 @@ def _get_pdf_fullpath(
     Path, CloudPath
         The validated full path to the PDF file.
     """
-    return get_full_path(output_dir, FileType.PDF.format_filename(filename), MkDir())
+    return get_full_path(
+        output_dir,
+        FileType.PDF.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
+    )
 
 
 def save_pdf(

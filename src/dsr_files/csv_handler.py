@@ -72,7 +72,10 @@ def save_csv(
         save method. Returns an empty dictionary if `safe_call` is False.
     """
     full_path = get_full_path(
-        output_dir, FileType.CSV.format_filename(filename), MkDir()
+        output_dir,
+        FileType.CSV.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
     )
     df = create_csv(data)
 

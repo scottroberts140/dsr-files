@@ -74,7 +74,10 @@ def save_json(
         save method. Returns an empty dictionary if `safe_call` is False.
     """
     full_path = get_full_path(
-        output_dir, FileType.JSON.format_filename(filename), MkDir()
+        output_dir,
+        FileType.JSON.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
     )
 
     # Ensure all data is JSON-serializable

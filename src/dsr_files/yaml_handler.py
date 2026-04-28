@@ -61,7 +61,10 @@ def save_yaml(
       or dictionary entries.
     """
     full_path = get_full_path(
-        output_dir, FileType.YAML.format_filename(filename), MkDir()
+        output_dir,
+        FileType.YAML.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
     )
     serializable_data = to_JSON_safe(data)
 

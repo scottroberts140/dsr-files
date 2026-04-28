@@ -50,7 +50,10 @@ def save_joblib(
         save method. Returns an empty dictionary if `safe_call` is False.
     """
     full_path = get_full_path(
-        output_dir, FileType.JOBLIB.format_filename(filename), MkDir()
+        output_dir,
+        FileType.JOBLIB.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
     )
 
     # Cast compress to Any specifically for the call to satisfy the restrictive stub

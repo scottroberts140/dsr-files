@@ -81,7 +81,10 @@ class MkDir(NamedTuple):
 
 
 def get_full_path(
-    output_dir: PathLike, filename: str, mkdir: MkDir
+    output_dir: PathLike,
+    filename: str,
+    mkdir: MkDir,
+    replace_existing: bool = False,
 ) -> CloudPath | Path:
     """
     Construct a full path from a directory and filename, optionally creating the directory.
@@ -99,6 +102,10 @@ def get_full_path(
     mkdir : MkDir
         A NamedTuple containing directory creation settings. For cloud paths,
         mkdir operations are handled safely by `cloudpathlib`.
+    replace_existing : bool, default False
+        If True and a file already exists at the final path, remove it before
+        returning the path. This helps avoid stale in-place overwrite behavior
+        in some external viewers.
 
     Returns
     -------
@@ -111,7 +118,17 @@ def get_full_path(
         # cloudpathlib handles mkdir on remote URIs as a virtual operation
         output_path.mkdir(parents=mkdir.parents, exist_ok=mkdir.exist_ok)
 
-    return output_path / filename
+    full_path = output_path / filename
+
+    if replace_existing and full_path.exists():
+        try:
+            full_path.unlink()
+        except FileNotFoundError:
+            # Defensive guard for race conditions where another process deletes
+            # the file between exists() and unlink().
+            pass
+
+    return full_path
 
 
 @functools.lru_cache(maxsize=1)

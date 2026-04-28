@@ -58,7 +58,10 @@ def save_parquet(
     """
     # Standard path construction
     full_path = get_full_path(
-        output_dir, FileType.PARQUET.format_filename(filename), MkDir()
+        output_dir,
+        FileType.PARQUET.format_filename(filename),
+        MkDir(),
+        replace_existing=True,
     )
 
     # Fastparquet fix: Convert Arrow-backed strings to object dtype
