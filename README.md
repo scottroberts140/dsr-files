@@ -9,6 +9,8 @@ File handling library for creating, saving, and loading various file types (CSV,
 
 **Version 3.1.1**: Standardized handler path typing around a shared **PathLike** alias for local, cloud, and string inputs, and updated package version reporting to use installed distribution metadata with a safe fallback.
 
+**Unreleased update**: Save handlers now remove an existing target file before writing a replacement, improving overwrite reliability across repeated exports.
+
 ## Features
 
 - **CSV**: Read and write CSV files with pandas.

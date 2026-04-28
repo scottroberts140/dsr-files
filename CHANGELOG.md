@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- **Overwrite-Safe Save Semantics**: Updated CSV, JSON, JOBLIB, YAML, Parquet, Excel, and PDF save paths to delete existing target files before writing replacements, preventing stale/partial overwrite edge cases across local and cloud-backed workflows.
+
 ## [3.1.1] - 2026-04-21
 
 ### Changed
