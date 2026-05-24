@@ -5,7 +5,9 @@
 [![License](https://img.shields.io/pypi/l/dsr-files.svg?cacheSeconds=300)](https://pypi.org/project/dsr-files/)
 [![Changelog](https://img.shields.io/badge/changelog-available-blue.svg)](https://github.com/scottroberts140/dsr-files/releases)
 
-File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET).
+File handling library for creating, saving, and loading various file types (CSV, JSON, JOBLIB, PDF, PARQUET, YAML), plus explicit model-artifact typing support.
+
+**Version 3.1.3**: Added `FileType.MODEL` to represent fitted-model artifact bundles with `.joblib` extension validation/normalization support for model-export workflows.
 
 **Version 3.1.1**: Standardized handler path typing around a shared **PathLike** alias for local, cloud, and string inputs, and updated package version reporting to use installed distribution metadata with a safe fallback.
 
@@ -20,7 +22,8 @@ File handling library for creating, saving, and loading various file types (CSV,
 - **PDF**: Generate interactive, indexed audit reports with Matplotlib and ReportLab.
 - **PARQUET**: High-performance columnar storage; now supports .pq as a valid logical extension.
 - **YAML**: Save and load YAML files with recursive logic and **strict key validation** to prevent duplicate entries in configuration files.
-- **FileType Utilities**: The FileType enum now includes `is_valid_extension()` for performing logical consistency checks between file names and formats without requiring filesystem access. This is ideal for pre-validating configuration files in ML pipelines.
+- **MODEL**: Use `FileType.MODEL` for explicit model-artifact export typing while reusing joblib-compatible extensions (`.joblib`, `.joblib.gz`).
+- **FileType Utilities**: The FileType enum includes `is_valid_extension()` for performing logical consistency checks between file names and formats without requiring filesystem access. This is ideal for pre-validating configuration files in ML pipelines.
 
 ## Installation
 

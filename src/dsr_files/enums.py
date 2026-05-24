@@ -35,6 +35,8 @@ class FileType(Flag):
         Apache Parquet columnar storage format (highly optimized for large datasets).
     YAML : auto
         YAML format.
+    MODEL : auto
+        Serialized fitted-model artifact bundle (.joblib).
     """
 
     CSV = auto()
@@ -44,6 +46,7 @@ class FileType(Flag):
     EXCEL = auto()
     PARQUET = auto()
     YAML = auto()
+    MODEL = auto()
 
     def get_extensions(self) -> list[str]:
         match self:
@@ -61,6 +64,8 @@ class FileType(Flag):
                 return ["parquet", "pq"]
             case FileType.YAML:
                 return ["yaml", "yml"]
+            case FileType.MODEL:
+                return ["joblib", "joblib.gz"]
             case _:
                 return []
 
@@ -164,6 +169,8 @@ class FileType(Flag):
                 return ".parquet"
             case FileType.YAML:
                 return ".yaml"
+            case FileType.MODEL:
+                return ".joblib"
             case _:
                 return ""
 
